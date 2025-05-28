@@ -17,11 +17,22 @@ class DataAccess:
     """Data access layer for products with integrated votes."""
     
     def __init__(self):
+        """Initialize the DataAccess instance.
+        
+        This creates an empty products list and sets the initialized flag to False.
+        """
         self.products_data: List[Dict[str, Any]] = []
         self._initialized = False
 
     def initialize(self) -> None:
-        """Initialize the data access layer."""
+        """Initialize the data access layer.
+        
+        This method loads products from the JSON file and sets up the data access layer.
+        It should be called before any other operations.
+        
+        Raises:
+            DataPersistenceError: If there's an error loading the products file.
+        """
         if self._initialized:
             return
             
@@ -35,7 +46,14 @@ class DataAccess:
             raise DataPersistenceError(f"Data initialization failed: {e}")
 
     def _load_products(self) -> None:
-        """Load products from JSON file."""
+        """Load products from JSON file.
+        
+        This method reads the products from the configured JSON file and ensures
+        all products have a votes field initialized to 0.
+        
+        Raises:
+            DataPersistenceError: If there's an error reading or parsing the JSON file.
+        """
         products_file = settings.get_products_file_path()
         
         if not products_file.exists():
@@ -57,7 +75,13 @@ class DataAccess:
             raise DataPersistenceError(f"Failed to load products from {products_file}: {e}")
 
     def _save_products(self) -> None:
-        """Save products to JSON file."""
+        """Save products to JSON file.
+        
+        This method writes the current products data to the configured JSON file.
+        
+        Raises:
+            DataPersistenceError: If there's an error writing to the JSON file.
+        """
         products_file = settings.get_products_file_path()
         
         try:
@@ -71,14 +95,33 @@ class DataAccess:
             raise DataPersistenceError(f"Failed to save products: {e}")
 
     def get_products(self) -> List[Dict[str, Any]]:
-        """Get all products with their vote counts."""
+        """Get all products with their vote counts.
+        
+        Returns:
+            List[Dict[str, Any]]: A list of all products, each containing their data and vote count.
+            
+        Raises:
+            DataPersistenceError: If there's an error accessing the products data.
+        """
         if not self._initialized:
             self.initialize()
             
         return [product.copy() for product in self.products_data]
 
     def get_product_by_id(self, product_id: int) -> Optional[Dict[str, Any]]:
-        """Get a specific product by ID with its vote count."""
+        """Get a specific product by ID with its vote count.
+        
+        Args:
+            product_id (int): The ID of the product to retrieve.
+            
+        Returns:
+            Optional[Dict[str, Any]]: The product data if found, None otherwise.
+            
+        Raises:
+            DataValidationError: If the product_id is not positive.
+            ProductNotFoundError: If no product exists with the given ID.
+            DataPersistenceError: If there's an error accessing the products data.
+        """
         if not self._initialized:
             self.initialize()
 
@@ -96,7 +139,19 @@ class DataAccess:
         return product
 
     def get_votes_for_product(self, product_id: int) -> int:
-        """Get vote count for a specific product."""
+        """Get vote count for a specific product.
+        
+        Args:
+            product_id (int): The ID of the product to get votes for.
+            
+        Returns:
+            int: The number of votes for the product.
+            
+        Raises:
+            DataValidationError: If the product_id is not positive.
+            ProductNotFoundError: If no product exists with the given ID.
+            DataPersistenceError: If there's an error accessing the products data.
+        """
         if not self._initialized:
             self.initialize()
 
@@ -118,7 +173,22 @@ class DataAccess:
         return product.get("votes", 0)
 
     def add_vote(self, product_id: int) -> Dict[str, Any]:
-        """Add a vote for a product."""
+        """Add a vote for a product.
+        
+        Args:
+            product_id (int): The ID of the product to vote for.
+            
+        Returns:
+            Dict[str, Any]: A dictionary containing the vote operation result with:
+                - origami_id: The ID of the voted product
+                - new_vote_count: The updated vote count
+                - message: A success message
+            
+        Raises:
+            DataValidationError: If the product_id is not positive.
+            ProductNotFoundError: If no product exists with the given ID.
+            DataPersistenceError: If there's an error saving the vote.
+        """
         if not self._initialized:
             self.initialize()
 
@@ -158,7 +228,11 @@ class DataAccess:
         }
 
     def health_check(self) -> bool:
-        """Check if the data access layer is healthy."""
+        """Check if the data access layer is healthy.
+        
+        Returns:
+            bool: True if the data access layer is healthy, False otherwise.
+        """
         try:
             if not self._initialized:
                 self.initialize()
@@ -169,7 +243,13 @@ class DataAccess:
             return False
 
     def cleanup(self) -> None:
-        """Cleanup resources."""
+        """Cleanup resources.
+        
+        This method saves any pending changes and performs necessary cleanup.
+        
+        Raises:
+            DataPersistenceError: If there's an error saving data during cleanup.
+        """
         # Save any pending changes
         if self._initialized:
             try:
@@ -178,7 +258,6 @@ class DataAccess:
             except Exception as e:
                 # Log cleanup failures as they're important for data integrity
                 logging.error(f"Failed to save data during cleanup: {e}")
-
 
 # Global data access instance
 data_access = DataAccess() 
