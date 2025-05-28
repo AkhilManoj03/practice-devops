@@ -5,193 +5,20 @@ A FastAPI service for managing origami voting with improved architecture,
 error handling, and performance optimizations.
 """
 
-import asyncio
-import json
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List
 
-import aiofiles
-import httpx
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, Field, ConfigDict
-from pydantic_settings import BaseSettings
 
-# Configuration
-class Settings(BaseSettings):
-    """Application settings with environment variable support."""
-    catalogue_service_url: str = Field(
-        default="http://catalogue:8000",
-        description="URL of the catalogue service"
-    )
-    votes_file_path: str = Field(
-        default="votes.json",
-        description="Path to the votes JSON file"
-    )
-    templates_dir: str = Field(
-        default="templates",
-        description="Directory containing Jinja2 templates"
-    )
-    log_level: str = Field(
-        default="INFO",
-        description="Logging level"
-    )
-    request_timeout: float = Field(
-        default=10.0,
-        description="HTTP request timeout in seconds"
-    )
-    version: str = Field(
-        default="1.0.1",
-        description="API version"
-    )
+# Import from our modules
+from app.config import settings
+from app.models import OrigamiResponse, VoteResponse, HealthResponse
+from app.services import VotesService, CatalogueService, OrigamiService
 
-    model_config = ConfigDict(env_file="app/.env")
-
-    def debug_log(self) -> None:
-        """Log all settings at debug level."""
-        logging.debug("Settings configuration:")
-        for field_name, field in self.model_fields.items():
-            value = getattr(self, field_name)
-            description = field.description or field_name
-            suffix = "s" if field_name == "request_timeout" else ""
-            logging.debug(f"{description}: {value}{suffix}")
-
-# Models
-class Origami(BaseModel):
-    """Base origami model."""
-    name: str
-    description: str
-    image_url: str
-
-
-class OrigamiResponse(Origami):
-    """Origami response model with votes."""
-    id: int
-    votes: int
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class VoteResponse(BaseModel):
-    """Vote operation response."""
-    origami_id: int
-    new_vote_count: int
-    message: str
-
-
-class HealthResponse(BaseModel):
-    """Health check response."""
-    status: str
-    timestamp: str
-    version: str
-
-
-# Services
-class VotesService:
-    """Service for managing votes data."""
-    def __init__(self, file_path: str):
-        self.file_path = Path(file_path)
-        self._lock = asyncio.Lock()
-
-    async def load_votes(self) -> Dict[str, Any]:
-        """Load votes from file asynchronously."""
-        try:
-            if not self.file_path.exists():
-                return {"origamis": {}}
-
-            async with aiofiles.open(self.file_path, "r") as f:
-                content = await f.read()
-                return json.loads(content)
-        except (json.JSONDecodeError, OSError) as e:
-            logging.error(f"Error loading votes: {e}")
-            return {"origamis": {}}
-
-    async def save_votes(self, votes_data: Dict[str, Any]) -> None:
-        """Save votes to file asynchronously with file locking."""
-        async with self._lock:
-            try:
-                # Ensure directory exists
-                self.file_path.parent.mkdir(parents=True, exist_ok=True)
-
-                async with aiofiles.open(self.file_path, "w") as f:
-                    await f.write(json.dumps(votes_data, indent=2))
-            except OSError as e:
-                logging.error(f"Error saving votes: {e}")
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to save votes",
-                )
-
-    async def get_votes_for_origami(self, origami_id: int) -> int:
-        """Get vote count for a specific origami."""
-        votes_data = await self.load_votes()
-        return votes_data.get("origamis", {}).get(str(origami_id), 0)
-
-    async def increment_vote(self, origami_id: int) -> int:
-        """Increment vote count for an origami and return new count."""
-        votes_data = await self.load_votes()
-
-        if "origamis" not in votes_data:
-            votes_data["origamis"] = {}
-
-        origami_id_str = str(origami_id)
-        votes_data["origamis"][origami_id_str] = (
-            votes_data["origamis"].get(origami_id_str, 0) + 1
-        )
-        await self.save_votes(votes_data)
-
-        return votes_data["origamis"][origami_id_str]
-
-class CatalogueService:
-    """Service for interacting with the catalogue API."""
-    def __init__(self, base_url: str, timeout: float = 10.0):
-        self.base_url = base_url.rstrip("/")
-        self.timeout = timeout
-
-    async def get_all_products(self) -> List[Dict[str, Any]]:
-        """Fetch all products from catalogue service."""
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            try:
-                response = await client.get(f"{self.base_url}/api/products")
-                response.raise_for_status()
-                return response.json()
-            except httpx.HTTPStatusError as e:
-                if e.response.status_code == 404:
-                    return []
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail="Catalogue service error",
-                )
-            except httpx.RequestError:
-                raise HTTPException(
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="Catalogue service unavailable",
-                )
-
-    async def get_product(self, product_id: int) -> Optional[Dict[str, Any]]:
-        """Fetch a specific product from catalogue service."""
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            try:
-                response = await client.get(
-                    f"{self.base_url}/api/products/{product_id}"
-                )
-                response.raise_for_status()
-                return response.json()
-            except httpx.HTTPStatusError as e:
-                if e.response.status_code == 404:
-                    return None
-                raise HTTPException(
-                    status_code=status.HTTP_502_BAD_GATEWAY,
-                    detail="Catalogue service error",
-                )
-            except httpx.RequestError:
-                raise HTTPException(
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="Catalogue service unavailable",
-                )
 
 # Application setup
 @asynccontextmanager
@@ -207,7 +34,6 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     """Application factory."""
-    settings = Settings()
 
     # Configure logging
     logging.basicConfig(
@@ -228,6 +54,7 @@ def create_app() -> FastAPI:
         settings.catalogue_service_url,
         settings.request_timeout,
     )
+    origami_service = OrigamiService(votes_service, catalogue_service)
 
     # Setup templates
     base_dir = Path(__file__).parent
@@ -236,6 +63,7 @@ def create_app() -> FastAPI:
     # Store services in app state
     app.state.votes_service = votes_service
     app.state.catalogue_service = catalogue_service
+    app.state.origami_service = origami_service
     app.state.templates = templates
     app.state.settings = settings
 
@@ -261,55 +89,48 @@ async def health_check():
     return HealthResponse(
         status="healthy",
         timestamp=datetime.utcnow().isoformat(),
-        version=app.state.settings.version
+        version=settings.version
     )
 
 @app.get("/api/origamis", response_model=List[OrigamiResponse], tags=["Origamis"])
 async def get_all_origamis():
     """Get all origamis with their vote counts."""
-    # Fetch products and votes concurrently
-    products_task = app.state.catalogue_service.get_all_products()
-    votes_task = app.state.votes_service.load_votes()
+    origamis_data = await app.state.origami_service.get_all_origamis_with_votes()
 
-    products, votes_data = await asyncio.gather(products_task, votes_task)
-
-    # Combine product data with votes
-    origamis = []
-    for product in products:
-        votes = votes_data.get("origamis", {}).get(str(product["id"]), 0)
-        origamis.append(
-            OrigamiResponse(
-                id=product["id"],
-                name=product["name"],
-                description=product["description"],
-                image_url=product["image_url"],
-                votes=votes,
-            )
+    if not origamis_data:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error fetching origamis from catalogue",
         )
 
-    return origamis
+    return [
+        OrigamiResponse(
+            id=origami["id"],
+            name=origami["name"],
+            description=origami["description"],
+            image_url=origami["image_url"],
+            votes=origami["votes"],
+        )
+        for origami in origamis_data
+    ]
 
 @app.get("/api/origamis/{origami_id}", response_model=OrigamiResponse, tags=["Origamis"])
 async def get_origami(origami_id: int):
     """Get a specific origami with its vote count."""
-    # Fetch product and votes concurrently
-    product_task = app.state.catalogue_service.get_product(origami_id)
-    votes_task = app.state.votes_service.get_votes_for_origami(origami_id)
+    origami_data = await app.state.origami_service.get_origami_with_votes(origami_id)
 
-    product, votes = await asyncio.gather(product_task, votes_task)
-
-    if not product:
+    if not origami_data:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Origami not found"
+            detail=f"Origami not found for id: {origami_id}"
         )
 
     return OrigamiResponse(
-        id=product["id"],
-        name=product["name"],
-        description=product["description"],
-        image_url=product["image_url"],
-        votes=votes,
+        id=origami_data["id"],
+        name=origami_data["name"],
+        description=origami_data["description"],
+        image_url=origami_data["image_url"],
+        votes=origami_data["votes"],
     )
 
 @app.get("/api/origamis/{origami_id}/votes", tags=["Votes"])
@@ -322,20 +143,17 @@ async def get_votes(origami_id: int):
 async def vote_for_origami(origami_id: int):
     """Vote for a specific origami."""
     # Validate origami exists
-    product = await app.state.catalogue_service.get_product(origami_id)
-    if not product:
+    vote_data = await app.state.origami_service.vote_for_origami(origami_id)
+    if not vote_data:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Origami not found",
+            detail=f"Error voting for origami with id: {origami_id}",
         )
 
-    # Increment vote
-    new_vote_count = await app.state.votes_service.increment_vote(origami_id)
-
     return VoteResponse(
-        origami_id=origami_id,
-        new_vote_count=new_vote_count,
-        message=f"Vote recorded for {product['name']}",
+        origami_id=vote_data["origami_id"],
+        new_vote_count=vote_data["new_vote_count"],
+        message=vote_data["message"],
     )
 
 # Error handlers
