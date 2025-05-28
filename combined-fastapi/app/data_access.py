@@ -10,6 +10,7 @@ import logging
 from typing import Dict, List, Optional, Any
 
 from app.config import settings
+from app.exceptions import ProductNotFoundError, DataValidationError, DataPersistenceError
 
 
 class DataAccess:
@@ -29,14 +30,16 @@ class DataAccess:
             self._initialized = True
             logging.info("Data access layer initialized successfully")
         except Exception as e:
-            raise RuntimeError(f"Data initialization failed: {e}")
+            # Log unexpected errors during initialization
+            logging.error(f"Critical failure during data access initialization: {e}")
+            raise DataPersistenceError(f"Data initialization failed: {e}")
 
     def _load_products(self) -> None:
         """Load products from JSON file."""
         products_file = settings.get_products_file_path()
         
         if not products_file.exists():
-            logging.warning(f"Products file not found: {products_file}")
+            logging.info(f"Products file not found: {products_file}, starting with empty data")
             self.products_data = []
             return
             
@@ -50,8 +53,8 @@ class DataAccess:
                     product['votes'] = 0
                     
             logging.info(f"Loaded {len(self.products_data)} products from {products_file}")
-        except Exception as e:
-            raise RuntimeError(f"Error loading products from {products_file}: {e}")
+        except (OSError, json.JSONDecodeError) as e:
+            raise DataPersistenceError(f"Failed to load products from {products_file}: {e}")
 
     def _save_products(self) -> None:
         """Save products to JSON file."""
@@ -63,9 +66,9 @@ class DataAccess:
             
             with open(products_file, 'w', encoding='utf-8') as f:
                 json.dump(self.products_data, f, indent=2)
-            logging.debug(f"Products saved to {products_file}")
-        except Exception as e:
-            raise RuntimeError(f"Error saving products to {products_file}: {e}")
+            logging.debug(f"Products saved successfully to {products_file}")
+        except OSError as e:
+            raise DataPersistenceError(f"Failed to save products: {e}")
 
     def get_products(self) -> List[Dict[str, Any]]:
         """Get all products with their vote counts."""
@@ -78,17 +81,28 @@ class DataAccess:
         """Get a specific product by ID with its vote count."""
         if not self._initialized:
             self.initialize()
-            
-        return next(
+
+        if product_id <= 0:
+            raise DataValidationError("Product ID must be positive")
+
+        product = next(
             (product.copy() for product in self.products_data if int(product["id"]) == product_id),
             None,
         )
+
+        if product is None:
+            raise ProductNotFoundError(f"Product with ID {product_id} not found")
+        
+        return product
 
     def get_votes_for_product(self, product_id: int) -> int:
         """Get vote count for a specific product."""
         if not self._initialized:
             self.initialize()
-            
+
+        if product_id <= 0:
+            raise DataValidationError("Product ID must be positive")
+
         product = next(
             (
                 product
@@ -97,34 +111,46 @@ class DataAccess:
             ),
             None,
         )
+
         if product is None:
-            raise ValueError(f"Product with ID {product_id} not found")
-        
+            raise ProductNotFoundError(f"Product with ID {product_id} not found")
+
         return product.get("votes", 0)
 
     def add_vote(self, product_id: int) -> Dict[str, Any]:
         """Add a vote for a product."""
         if not self._initialized:
             self.initialize()
-            
-        # Find the product
-        product_index = None
-        for i, product in enumerate(self.products_data):
-            if int(product["id"]) == product_id:
-                product_index = i
-                break
-                
+
+        # Business logic validation
+        if product_id <= 0:
+            raise DataValidationError("Product ID must be positive")
+
+        # Find product - raise business error if not found
+        product_index = next(
+            (i for i, p in enumerate(self.products_data) if int(p["id"]) == product_id),
+            None
+        )
+
         if product_index is None:
-            raise ValueError(f"Product with ID {product_id} not found")
-            
+            raise ProductNotFoundError(f"Product with ID {product_id} not found")
+
         # Add vote
         current_votes = self.products_data[product_index].get("votes", 0)
         new_votes = current_votes + 1
         self.products_data[product_index]["votes"] = new_votes
-        
-        # Save products
-        self._save_products()
-        
+
+        # Save products - handle I/O errors as infrastructure errors
+        try:
+            self._save_products()
+        except DataPersistenceError:
+            # Rollback the vote change
+            self.products_data[product_index]["votes"] = current_votes
+            logging.warning(f"Rolled back vote for product {product_id} due to save failure")
+            raise
+
+        logging.debug(f"Vote added for product {product_id}: {current_votes} -> {new_votes}")
+
         return {
             "origami_id": product_id,
             "new_vote_count": new_votes,
@@ -138,6 +164,7 @@ class DataAccess:
                 self.initialize()
             return True
         except Exception as e:
+            # Log health check failures for monitoring
             logging.error(f"Health check failed: {e}")
             return False
 
@@ -147,9 +174,10 @@ class DataAccess:
         if self._initialized:
             try:
                 self._save_products()
-                logging.info("Data access cleanup completed")
+                logging.info("Data access cleanup completed successfully")
             except Exception as e:
-                logging.error(f"Error during cleanup: {e}")
+                # Log cleanup failures as they're important for data integrity
+                logging.error(f"Failed to save data during cleanup: {e}")
 
 
 # Global data access instance

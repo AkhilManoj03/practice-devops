@@ -21,6 +21,7 @@ from fastapi.templating import Jinja2Templates
 from app.config import settings
 from app.data_access import data_access
 from app.models import Product, SystemInfo, HealthCheck, VoteResponse
+from app.exceptions import ProductNotFoundError, DataValidationError, DataPersistenceError
 
 # Utility Functions
 def get_system_info() -> SystemInfo:
@@ -39,7 +40,7 @@ def get_system_info() -> SystemInfo:
         hostname=hostname,
         ip_address=ip_address,
         is_container=is_container,
-        is_kubernetes=is_kubernetes
+        is_kubernetes=is_kubernetes,
     )
 
 # Application Lifecycle Management
@@ -62,8 +63,7 @@ async def lifespan(app: FastAPI):
     try:
         data_access.initialize()
         logging.info(f"Data source '{settings.data_source}' initialized successfully")
-    except RuntimeError as e:
-        logging.error(f"Critical error during startup: {e}")
+    except DataPersistenceError as e:
         raise RuntimeError(f"Failed to initialize data source: {e}")
 
     yield
@@ -102,7 +102,7 @@ async def home(request: Request):
             content={
                 "message": "Welcome to Combined Origami Service",
                 "version": settings.app_version,
-                "system_info": get_system_info().model_dump()
+                "system_info": get_system_info().model_dump(),
             }
         )
 
@@ -113,7 +113,7 @@ async def home(request: Request):
             "request": request,
             "current_year": datetime.now().year,
             "system_info": system_info.model_dump(),
-            "version": settings.app_version
+            "version": settings.app_version,
         }
     )
 
@@ -122,22 +122,20 @@ async def get_products() -> List[Product]:
     """Get all products with their vote counts."""
     try:
         products_data = data_access.get_products()
-        if products_data is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="No products found"
-            )
+        
         return [Product(**product) for product in products_data]
 
-    except RuntimeError as e:
+    except DataPersistenceError as e:
+        logging.error(f"Infrastructure error in get_products(): {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error accessing products for /api/products: {e}"
+            detail="Unable to access product data",
         )
     except Exception as e:
+        logging.error(f"Unexpected error in get_products(): {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error processing products for /api/products: {e}"
+            detail="An unexpected error occurred",
         )
 
 @app.get("/api/products/{product_id}", response_model=Product, tags=["Products"])
@@ -145,22 +143,31 @@ async def get_product(product_id: int) -> Product:
     """Get a specific product by ID with its vote count."""
     try:
         product_data = data_access.get_product_by_id(product_id)
-        if product_data is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Product with ID {product_id} not found"
-            )
         return Product(**product_data)
-
-    except RuntimeError as e:
+    
+    except ProductNotFoundError as e:
+        logging.error(f"Product not found in get_product({product_id}): {e}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Product not found",
+        )
+    except DataValidationError as e:
+        logging.error(f"Data validation error in get_product({product_id}): {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Error validating product data",
+        )
+    except DataPersistenceError as e:
+        logging.error(f"Infrastructure error in get_product({product_id}): {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error accessing product for /api/products/{product_id}: {e}"
+            detail="Unable to access product data"
         )
     except Exception as e:
+        logging.error(f"Unexpected error in get_product({product_id}): {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error processing product data for /api/products/{product_id}: {e}"
+            detail="An unexpected error occurred",
         )
 
 # ===== VOTING SERVICE ENDPOINTS =====
@@ -181,15 +188,29 @@ async def get_votes(origami_id: int):
         votes = data_access.get_votes_for_product(origami_id)
         return {"origami_id": origami_id, "votes": votes}
 
-    except ValueError as e:
+    except DataValidationError as e:
+        logging.error(f"Data validation error in get_votes({origami_id}): {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Error validating vote data"
+        )
+    except ProductNotFoundError as e:
+        logging.error(f"Product not found in get_votes({origami_id}): {e}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Origami with ID {origami_id} not found for /api/origamis/{origami_id}/votes: {e}"
+            detail="Origami not found",
         )
-    except Exception as e:
+    except DataPersistenceError as e:
+        logging.error(f"Infrastructure error in get_votes({origami_id}): {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error getting votes for origami {origami_id} for /api/origamis/{origami_id}/votes: {e}"
+            detail="Unable to access vote data"
+        )
+    except Exception as e:
+        logging.error(f"Unexpected error in get_votes({origami_id}): {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred",
         )
 
 @app.post("/api/origamis/{origami_id}/vote", response_model=VoteResponse, tags=["Votes"])
@@ -199,15 +220,29 @@ async def vote_for_origami(origami_id: int):
         vote_data = data_access.add_vote(origami_id)
         return VoteResponse(**vote_data)
 
-    except ValueError as e:
+    except DataValidationError as e:
+        logging.error(f"Data validation error in vote_for_origami({origami_id}): {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Error validating vote data",
+        )
+    except ProductNotFoundError as e:
+        logging.error(f"Product not found in vote_for_origami({origami_id}): {e}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Origami with ID {origami_id} not found for /api/origamis/{origami_id}/vote: {e}"
+            detail="Origami not found",
         )
-    except Exception as e:
+    except DataPersistenceError as e:
+        logging.error(f"Infrastructure error in vote_for_origami({origami_id}): {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error voting for origami with id: {origami_id} for /api/origamis/{origami_id}/vote: {e}"
+            detail="Unable to save vote data",
+        )
+    except Exception as e:
+        logging.error(f"Unexpected error in vote_for_origami({origami_id}): {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred",
         )
 
 # ===== SYSTEM ENDPOINTS =====
