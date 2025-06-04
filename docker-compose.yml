@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - catalogue
+      - recommendation
+      - voting
+    networks:
+      - app-network
+
+  catalogue:
+    build:
+      context: ./catalogue
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
+
+  recommendation:
+    build:
+      context: ./recommendation
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    networks:
+      - app-network
+
+  voting:
+    build:
+      context: ./voting
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    depends_on: 
+      - catalogue
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
