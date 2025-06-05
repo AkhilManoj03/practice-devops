@@ -1,10 +1,10 @@
 # Project Modifications and Improvements
 
 ## Overview
-This document outlines the significant changes and improvements made to the original Craftista 
-project. The modifications were primarily focused on enhancing the application's performance, 
-reliability, and maintainability while gaining hands-on experience with modern DevOps practices and
-development techniques.
+This document outlines the significant changes and improvements made to the original [Craftista 
+project](https://github.com/craftista/craftista). The modifications were primarily focused on 
+enhancing the application's performance,  reliability, and maintainability while gaining hands-on 
+experience with modern DevOps practices and development techniques.
 
 ## Changes Made
 
