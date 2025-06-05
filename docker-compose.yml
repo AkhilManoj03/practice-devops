@@ -16,7 +16,7 @@ services:
 
   catalogue:
     build:
-      context: ./catalogue
+      context: ./catalogue-fastapi
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
