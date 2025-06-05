@@ -1,6 +1,8 @@
 # Combined Origami Service
 
-A unified FastAPI service that combines both product catalogue and voting functionality into a single API. This service eliminates the need for inter-service communication and simplifies the architecture while maintaining all existing endpoints.
+A unified FastAPI service that combines both product catalogue and voting functionality into a
+single API. This service eliminates the need for inter-service communication and simplifies the
+architecture while maintaining all existing endpoints.
 
 ## Features
 
@@ -66,6 +68,13 @@ docker build -t combined-origami-service .
 docker run -p 8000:8000 combined-origami-service
 ```
 
+### Docker Compose with PostgreSQL as datasource
+
+```bash
+# build the docker-compose file
+docker compose up --build
+```
+
 ## Configuration
 
 The service can be configured via environment variables:
@@ -88,4 +97,5 @@ The service can be configured via environment variables:
 
 ## Migration from Separate Services
 
-This combined service maintains full API compatibility with the original separate services, so existing clients can continue to use the same endpoints without any changes. 
+This combined service maintains full API compatibility with the original separate services, so
+existing clients can continue to use the same endpoints without any changes. 
