@@ -5,6 +5,7 @@ This module handles all application settings and environment variable loading.
 """
 
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -27,18 +28,23 @@ class Settings(BaseSettings):
     
     # Data source configuration
     data_source: str = "json"  # "json" or "database"
-    products_file: str = "app/products.json"
     
-    # Database settings (for future use)
+    # File paths
+    base_dir: Path = Path(__file__).resolve().parent
+    products_file: str = "app/products.json"
+    templates_dir: str = "app/templates"
+    static_dir: str = "app/static"
+    
+    # Database configuration
     db_host: Optional[str] = None
     db_name: Optional[str] = None
     db_user: Optional[str] = None
     db_password: Optional[str] = None
     db_port: int = 5432
     
-    # Static files and templates
-    static_dir: str = "app/static"
-    templates_dir: str = "app/templates"
+    # Redis configuration
+    redis_host: Optional[str] = None
+    redis_port: int = 6379
 
     # Configure Pydantic to ignore extra fields and load from .env file
     model_config = ConfigDict(
@@ -52,14 +58,29 @@ class Settings(BaseSettings):
         for field_name, value in self.model_dump().items():
             logging.debug(f"{field_name}: {value}")
 
-    def get_templates_path(self) -> Path:
-        """Get the full path to templates directory."""
-        base_dir = Path(__file__).parent
-        return base_dir / self.templates_dir
-
     def get_products_file_path(self) -> Path:
-        """Get the full path to products file."""
-        return Path(self.products_file)
+        """Get the full path to the products JSON file.
+        
+        Returns:
+            Path: Full path to products.json
+        """
+        return self.base_dir / self.products_file
+
+    def get_templates_dir(self) -> str:
+        """Get the full path to the templates directory.
+        
+        Returns:
+            str: Full path to templates directory
+        """
+        return str(self.base_dir / self.templates_dir)
+
+    def get_static_dir(self) -> str:
+        """Get the full path to the static directory.
+        
+        Returns:
+            str: Full path to static directory
+        """
+        return str(self.base_dir / self.static_dir)
 
 
 # Global settings instance

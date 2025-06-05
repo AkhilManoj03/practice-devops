@@ -40,4 +40,4 @@ class HealthCheck(BaseModel):
     """Health check response model."""
     status: str
     timestamp: datetime
-    version: str 
+    version: str
