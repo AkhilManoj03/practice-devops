@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from pydantic import Field, ConfigDict
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 
 
@@ -40,7 +40,11 @@ class Settings(BaseSettings):
     static_dir: str = "app/static"
     templates_dir: str = "app/templates"
 
-    model_config = ConfigDict(env_file=".env")
+    # Configure Pydantic to ignore extra fields and load from .env file
+    model_config = ConfigDict(
+        env_file="app/.env",
+        extra="ignore"
+    )
 
     def debug_log(self) -> None:
         """Log all settings at debug level if debugging is enabled."""
