@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",	
-  "productsApiBaseUri": "http://catalogue:8000",
+  "productsApiBaseUri": "http://products:8000",
   "recommendationBaseUri": "http://recommendation:8080",
-  "votingBaseUri": "http://voting:8080"
+  "votingBaseUri": "http://products:8000"
 }
 

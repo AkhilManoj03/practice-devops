@@ -82,9 +82,9 @@ function renderProducts(products, canVote) {
 function fetchVotesForOrigami(origamiId) {
     fetch(`/api/origamis/${origamiId}/votes`)
         .then(response => response.json())
-        .then(votes => {
+        .then(data => {
             let votesElem = document.querySelector(`#votes-${origamiId}`);
-            votesElem.textContent = `Votes: ${votes}`;
+            votesElem.textContent = `Votes: ${data.votes}`;
         });
 }
 
