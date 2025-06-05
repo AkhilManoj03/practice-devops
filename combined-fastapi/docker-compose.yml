@@ -1,0 +1,26 @@
+networks:
+  craftista:
+    driver: bridge
+
+services:
+  products-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - products-db
+    ports:
+      - "8000:8000"
+    networks:
+      - craftista
+
+  products-db:
+    image: postgres:17-alpine3.21
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    networks:
+      - craftista
