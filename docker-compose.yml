@@ -34,7 +34,7 @@ services:
 
   voting:
     build:
-      context: ./voting
+      context: ./voting-fastapi
       dockerfile: Dockerfile
     ports:
       - "8081:8080"
