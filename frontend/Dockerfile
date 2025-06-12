@@ -22,9 +22,15 @@ COPY --chown=appuser:appuser package.json config.json ./
 RUN npm install --no-audit --no-fund --prefer-offline && \
     npm cache clean --force
 
-# Copy application code
+# Copy application files
 COPY --chown=appuser:appuser . .
+
+# Set OpenTelemetry environment variables with defaults
+ENV NODE_ENV=production
+ENV OTEL_SERVICE_NAME=craftista-frontend
+ENV OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/traces
+ENV OTEL_TRACES_SAMPLER=always_on
 
 EXPOSE 3000
 
-CMD ["node", "app.js"]
+CMD ["npm", "start"]

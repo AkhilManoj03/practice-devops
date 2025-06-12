@@ -3,25 +3,17 @@ const axios = require('axios');
 const os = require('os');
 const fs = require('fs');
 const config = require('./config.json'); // Import configuration
-const app = express();
-const productsApiBaseUri = config.productsApiBaseUri;
-const recommendationBaseUri = config.recommendationBaseUri;
-const votingBaseUri = config.votingBaseUri;
 const origamisRouter = require('./routes/origamis');
 
+const app = express();
+
 app.set('view engine', 'ejs');
-app.use(express.static('public'));
 app.use('/api/origamis', origamisRouter);
-
-// Static Middleware
-app.use('/static', express.static('public'));
-
-
 
 // Endpoint to serve product data to client
 app.get('/api/products', async (req, res) => {
   try {
-    let response = await axios.get(`${productsApiBaseUri}/api/products`);
+    let response = await axios.get(`${config.productsApiBaseUri}/api/products`);
     res.json(response.data);
   } catch (error) {
     console.error('Error fetching products:', error);
@@ -29,20 +21,23 @@ app.get('/api/products', async (req, res) => {
   }
 });
 
-app.get('/', (req, res) => {
-  // Gather system info
-  const systemInfo = {
-    hostname: os.hostname(),
-    ipAddress: getIPAddress(),
-    isContainer: isContainer(),
-    isKubernetes: fs.existsSync('/var/run/secrets/kubernetes.io')
-    // ... any additional system info here
-  };
+app.get('/', async (req, res) => {
+  try {
+    // Gather system info
+    const systemInfo = {
+      hostname: os.hostname(),
+      ipAddress: getIPAddress(),
+      isContainer: isContainer(),
+      isKubernetes: fs.existsSync('/var/run/secrets/kubernetes.io')
+    };
 
-  res.render('index', {
-    systemInfo: systemInfo,
-    app_version: config.version, // provide version to the view
-  });
+    res.render('index', {
+      systemInfo: systemInfo,
+      app_version: config.version,
+    });
+  } catch (error) {
+    res.status(500).send('Error rendering home page');
+  }
 });
 
 function getIPAddress() {
@@ -63,33 +58,26 @@ function isContainer() {
 
 app.get('/api/service-status', async (req, res) => {
   try {
-    // Example of checking the status of the products service
-    const productServiceResponse = await axios.get(`${productsApiBaseUri}/api/products`);
-    
-    // Additional checks for more services can be added similarly
+    const productServiceResponse = await axios.get(`${config.productsApiBaseUri}/api/products`);
 
-    // If code execution reaches here, the service(s) are up
     res.json({
       Catalogue: 'up',
-      // otherService: 'up' or 'down'
     });
   } catch (error) {
     console.error('Error:', error);
     res.json({
       Catalogue: 'down',
-      // otherService: 'up' or 'down'
     });
   }
 });
 
-app.get('/recommendation-status', (req, res) => {
-    axios.get(config.recommendationBaseUri + '/api/recommendation-status')
-        .then(response => {
-            res.json({status: "up", message: "Recommendation Service is Online"});
-        })
-        .catch(error => {
-            res.json({status: "down", message: "Recommendation Service is Offline"});
-        });
+app.get('/recommendation-status', async (req, res) => {
+  try {
+    await axios.get(config.recommendationBaseUri + '/api/recommendation-status');
+    res.json({status: "up", message: "Recommendation Service is Online"});
+  } catch (error) {
+    res.json({status: "down", message: "Recommendation Service is Offline"});
+  }
 });
 
 app.get('/votingservice-status', (req, res) => {
@@ -102,7 +90,6 @@ app.get('/votingservice-status', (req, res) => {
         });
 });
 
-
 app.get('/daily-origami', (req, res) => {
     axios.get(config.recommendationBaseUri + '/api/origami-of-the-day')
         .then(response => {
@@ -113,6 +100,9 @@ app.get('/daily-origami', (req, res) => {
         });
 });
 
+// Static Middleware
+app.use('/static', express.static('public'));
+app.use(express.static('public'));
 
 // Handle 404
 app.use((req, res, next) => {
@@ -124,6 +114,11 @@ const server = app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
 
+// Graceful shutdown to ensure all spans are exported
+process.on('SIGTERM', () => {
+  server.close(() => {
+    console.log('Server shutting down');
+  });
+});
+
 module.exports = server; // Note that we're exporting the server, not app.
-
-
