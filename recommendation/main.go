@@ -1,15 +1,19 @@
 package main
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
-        "recommendation/api"
+	"recommendation/api"
 	"net/http"
 	"time"
-        "encoding/json"
+	"encoding/json"
 	"net"
-        "os"
-)
+	"os"
+	"log"
 
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	"recommendation/telemetry"
+)
 
 // Config represents the structure of our configuration file.
 type Config struct {
@@ -29,7 +33,6 @@ func loadConfig() (Config, error) {
     err = decoder.Decode(&config)
     return config, err
 }
-
 
 type SystemInfo struct {
 	Hostname      string
@@ -81,7 +84,6 @@ func getRecommendationStatus(c *gin.Context) {
 	})
 }
 
-
 func renderHomePage(c *gin.Context) {
 	config, err := loadConfig()
 	if err != nil {
@@ -98,9 +100,22 @@ func renderHomePage(c *gin.Context) {
 	})
 }
 
-
 func main() {
+	// Initialize OpenTelemetry
+	shutdown, err := telemetry.InitTracer()
+	if err != nil {
+		log.Fatalf("Failed to initialize tracer: %v", err)
+	}
+	defer func() {
+		if err := shutdown(context.Background()); err != nil {
+			log.Printf("Error shutting down tracer provider: %v", err)
+		}
+	}()
+
 	router := gin.Default()
+	
+	// Add OpenTelemetry middleware for automatic instrumentation
+	router.Use(otelgin.Middleware("recommendation-service"))
 		
 	// Load HTML files
 	router.LoadHTMLGlob("templates/*")
@@ -111,16 +126,14 @@ func main() {
 	// Define route for the home page
 	router.GET("/", renderHomePage)
 
-	// Handle requests to the /origami-of-the-day endpoint with the GetOrigamiOfTheDay function from the api package
+	// Handle requests to the /origami-of-the-day endpoint
 	router.GET("/api/origami-of-the-day", api.GetOrigamiOfTheDay)
         
 	// Service Status Page
-        router.GET("/api/recommendation-status", getRecommendationStatus)
-
+	router.GET("/api/recommendation-status", getRecommendationStatus)
 
 	// Start the server on port 8080
 	router.Run(":8080")
-
 }
 
 
