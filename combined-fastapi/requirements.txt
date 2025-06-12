@@ -9,3 +9,6 @@ aiofiles==23.2.1
 httpx==0.25.2
 psycopg2-binary>=2.9.0
 redis>=5.0.1
+opentelemetry-distro
+opentelemetry-exporter-otlp
+opentelemetry-instrumentation-fastapi
