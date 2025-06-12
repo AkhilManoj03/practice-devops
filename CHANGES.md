@@ -74,6 +74,19 @@ and testing
 
 **Related PR**: [combined: feat: implement Redis caching for API #6](https://github.com/AkhilManoj03/practice-devops/pull/6)
 
+### 7. Observability and Distributed Tracing
+- Implemented OpenTelemetry across all microservices for comprehensive observability
+- Added Jaeger for distributed tracing visualization
+- **Approach**: Standardized on automatic instrumentation across all services for consistency
+- **Benefits**:
+  - End-to-end request tracing across microservices
+  - Performance monitoring and bottleneck identification
+  - Error tracking and debugging capabilities
+  - Service dependency mapping
+  - Improved system observability and maintainability
+
+**Related PR**: [observability: implement OpenTelemetry and Jaeger distributed tracing #7](https://github.com/AkhilManoj03/practice-devops/pull/7)
+
 ## Learning Outcomes
 This project has provided valuable hands-on experience in:
 - Modern containerization techniques
@@ -82,3 +95,4 @@ This project has provided valuable hands-on experience in:
 - Database design and caching strategies
 - DevOps best practices
 - Service consolidation and refactoring
+- Distributed tracing and observability implementation

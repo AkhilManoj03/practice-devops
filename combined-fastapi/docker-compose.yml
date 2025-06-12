@@ -10,6 +10,7 @@ services:
     depends_on:
       - products-db
       - redis
+      - otel-collector
     ports:
       - "8000:8000"
     networks:
@@ -30,5 +31,25 @@ services:
     image: redis:8.0.0-alpine
     ports:
       - "6379:6379"
+    networks:
+      - craftista
+
+  otel-collector:
+    build: ../otel-collector
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    networks:
+      - craftista
+  
+  jaeger:
+    image: jaegertracing/all-in-one:1.53
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+    ports:
+      - "16686:16686"
+      - "14250:14250"
+      - "4317"
+      - "4318"
     networks:
       - craftista

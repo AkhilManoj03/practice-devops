@@ -3,13 +3,21 @@
   "version": "1.0.0",
   "main": "app.js",
   "dependencies": {
+    "@opentelemetry/api": "^1.7.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.41.1",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.48.0",
+    "@opentelemetry/instrumentation": "^0.48.0",
+    "@opentelemetry/resources": "^1.21.0",
+    "@opentelemetry/sdk-node": "^0.48.0",
+    "@opentelemetry/sdk-trace-base": "^1.21.0",
+    "@opentelemetry/semantic-conventions": "^1.21.0",
     "axios": "^0.21.1",
     "dependencies": "^0.0.1",
     "ejs": "^3.1.6",
     "express": "^4.17.1"
   },
   "scripts": {
-    "start": "node app.js",
+    "start": "node --require ./tracing.js app.js",
     "test": "mocha test/*.js"
   },
   "devDependencies": {

@@ -13,17 +13,25 @@ RUN addgroup -S -g 1001 appuser && \
 # Copy go mod files first for better caching
 COPY --chown=appuser:appuser go.mod go.sum ./
 
-# Download dependencies
-RUN go mod download
+# Download dependencies and verify modules
+RUN go mod download && \
+    go mod verify
 
 # Copy the rest of the application
 COPY --chown=appuser:appuser . .
+
+# Update go.mod and go.sum
+RUN go mod tidy
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -o app
 
 # Switch to non-root user
 USER appuser
+
+# Set OpenTelemetry environment variables
+ENV OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/traces
+ENV OTEL_SERVICE_NAME=recommendation-service
 
 EXPOSE 8080
 

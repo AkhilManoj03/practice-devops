@@ -32,6 +32,11 @@ COPY --chown=appuser:appuser app app/
 
 EXPOSE 8000
 
+# Set OpenTelemetry environment variables with defaults
+ENV OTEL_SERVICE_NAME=products-api
+ENV OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/traces
+ENV OTEL_TRACES_SAMPLER=always_on
+
 # Add local bin to PATH for pip-installed executables
 ENV PATH="/home/appuser/.local/bin:${PATH}"
 ENV PYTHONPATH="/app"

@@ -13,11 +13,17 @@ from datetime import datetime
 from typing import List
 
 from fastapi import FastAPI, HTTPException, Request, status
-from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-# Import from our modules
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.sdk.resources import Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
 from app.config import settings
 from app.data_access import data_access
 from app.models import Product, SystemInfo, HealthCheck, VoteResponse
@@ -60,6 +66,19 @@ async def lifespan(app: FastAPI):
     logging.info(f"Starting {settings.app_title} v{settings.app_version}")
     logging.info(f"Using data source: {settings.data_source}")
 
+    # Initialize tracing
+    resource = Resource.create({
+        "service.name": os.environ.get("OTEL_SERVICE_NAME", "products-api"),
+        "service.version": os.environ.get("APP_VERSION", "1.0.0"),
+        "deployment.environment": "production",
+    })
+    tracer_provider = TracerProvider(resource=resource)
+    otlp_exporter = OTLPSpanExporter(
+        os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4318/v1/traces"),
+    )
+    tracer_provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
+    trace.set_tracer_provider(tracer_provider)
+
     # Initialize data access layer
     try:
         data_access.initialize()
@@ -90,12 +109,13 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+FastAPIInstrumentor.instrument_app(app)
+
 # Mount static files and templates
 if os.path.exists(settings.static_dir):
     app.mount("/static", StaticFiles(directory=settings.static_dir), name="static")
 if os.path.exists(settings.templates_dir):
     templates = Jinja2Templates(directory=settings.templates_dir)
-
 # API Routes
 
 # ===== CATALOGUE SERVICE ENDPOINTS =====
