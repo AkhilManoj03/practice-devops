@@ -85,7 +85,30 @@ and testing
   - Service dependency mapping
   - Improved system observability and maintainability
 
-**Related PR**: [observability: implement OpenTelemetry and Jaeger distributed tracing #7](https://github.com/AkhilManoj03/practice-devops/pull/7)
+**Related PR**: [otel: Implement OpenTelementary and Jaegar #7](https://github.com/AkhilManoj03/practice-devops/pull/8)
+
+### 8. Application Architecture Restructuring and Cleanup
+- **Restructured Combined FastAPI Service**: Reorganized the application into distinct architectural layers
+  - **API Layer**: Hosts all public API routes and their dependencies
+  - **Core Layer**: Contains business logic for Product, Votes, and System services  
+  - **Infrastructure Layer**: Manages data access logic and database operations
+- **Removed JSON Datasource Support**:
+  - Eliminated all JSON data source configurations and related code
+  - Simplified data access layer to use only PostgreSQL for persistent storage
+  - Updated `products.json` to serve exclusively for initial database setup
+- **Service Renaming**: Renamed `combined-fastapi` folder to `product` for better clarity and representation
+- **Database Configuration Improvements**: 
+  - Replaced generic database configuration with specific PostgreSQL settings
+  - Made database configuration required (non-optional) since database is now the only data source
+  - Updated field names to follow PostgreSQL conventions (`postgres_*` prefix)
+- **Benefits**:
+  - Enhanced scalability and maintainability through clear separation of concerns
+  - Reduced complexity by eliminating dual data source support
+  - Improved code organization for easier onboarding and future development
+  - Simplified configuration management
+  - Better alignment with production-ready practices
+
+**Related PR**: [product: refactor: restructure application architecture and remove JSON datasource #8](https://github.com/AkhilManoj03/practice-devops/pull/9)
 
 ## Learning Outcomes
 This project has provided valuable hands-on experience in:

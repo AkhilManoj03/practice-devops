@@ -1,7 +1,7 @@
 """
-Database manager for the Combined Origami Service.
+PostgreSQL database manager for the Combined Origami Service.
 
-This module handles data operations for products with integrated votes.
+This module handles data operations for products with integrated votes using PostgreSQL.
 """
 
 import json
@@ -10,9 +10,9 @@ from typing import Dict, List, Optional, Any
 
 import psycopg2
 
-from app.exceptions import ProductNotFoundError, DataPersistenceError
+from core.exceptions import DataPersistenceError, ProductNotFoundError
 
-class DatabaseManager:
+class PostgresManager:
     """Database connection and operations manager for PostgreSQL with votes support."""
 
     def __init__(self, settings):
@@ -33,24 +33,24 @@ class DatabaseManager:
         Raises:
             DataPersistenceError: If connection fails or schema initialization fails.
         """
-        if self.settings.data_source != "database":
-            return
 
         try:
             self.connection = psycopg2.connect(
-                host=self.settings.db_host,
-                database=self.settings.db_name,
-                user=self.settings.db_user,
-                password=self.settings.db_password,
-                port=self.settings.db_port
+                host=self.settings.postgres_host,
+                database=self.settings.postgres_db,
+                user=self.settings.postgres_user,
+                password=self.settings.postgres_password,
+                port=self.settings.postgres_port
             )
-            logging.info(f"Database connection established to {self.settings.db_host}:{self.settings.db_port}")
+            logging.info(f"Database connection established to {self.settings.postgres_host}:{self.settings.postgres_port}")
 
-            # Ensure the database schema is set up
             self._initialize_schema()
         except psycopg2.Error as e:
             logging.error(f"Failed to connect to database: {e}")
             raise DataPersistenceError("Failed to connect to database")
+        except Exception as e:
+            logging.error(f"Unexpected error in connect(): {e}")
+            raise Exception("Unexpected error connecting to database")
 
     def _initialize_schema(self) -> None:
         """Initialize database schema for products with votes.
@@ -66,15 +66,6 @@ class DatabaseManager:
 
         try:
             with self.connection.cursor() as cursor:
-                # Check if table exists
-                cursor.execute("""
-                    SELECT EXISTS (
-                        SELECT FROM information_schema.tables 
-                        WHERE table_name = 'products'
-                    )
-                """)
-                table_exists = cursor.fetchone()[0]
-
                 # Create products table if it doesn't exist
                 cursor.execute("""
                     CREATE TABLE IF NOT EXISTS products (
@@ -86,18 +77,24 @@ class DatabaseManager:
                     )
                 """)
 
+                # Check if table is empty
+                cursor.execute("SELECT COUNT(*) FROM products")
+                count = cursor.fetchone()[0]
+
                 # Create index on id for faster lookups
                 cursor.execute("""
                     CREATE INDEX IF NOT EXISTS idx_products_id ON products(id)
                 """)
 
-                if table_exists:
-                    self.connection.commit()
-                    logging.info("Database schema initialized successfully")
-                    return
+                self.connection.commit()
+                logging.info("Database schema initialized successfully")
         except psycopg2.Error as e:
             logging.error(f"Failed to initialize database schema: {e}")
             raise DataPersistenceError("Failed to initialize database schema")
+        
+        if count != 0:
+            logging.debug(f"Products table already contains {count} records, skipping initial data load")
+            return
 
         # Load initial data from JSON file
         products_file = self.settings.get_products_file_path()
@@ -112,7 +109,6 @@ class DatabaseManager:
             for product in products:
                 if 'votes' not in product:
                     product['votes'] = 0
-
         except (FileNotFoundError, json.JSONDecodeError) as e:
             logging.error(f"Failed to load initial products from {products_file}: {e}")
             raise DataPersistenceError("Failed to load initial products from json file")
@@ -140,7 +136,7 @@ class DatabaseManager:
 
     def disconnect(self) -> None:
         """Close database connection.
-        
+
         Raises:
             DataPersistenceError: If connection closure fails.
         """
@@ -163,7 +159,7 @@ class DatabaseManager:
         if not self.connection:
             return False
         try:
-            # Test the connection with a simple query
+            # Test connection with a simple query
             with self.connection.cursor() as cursor:
                 cursor.execute("SELECT 1")
             return True
@@ -174,21 +170,25 @@ class DatabaseManager:
         """Fetch all products from database with votes.
 
         Returns:
-            List[Dict[str, Any]]: List of products, each containing id, name, description,
-                                 image_url, and votes.
+            List[Dict[str, Any]]: List of products
 
         Raises:
             DataPersistenceError: If database connection is not established or query fails.
+            ProductNotFoundError: If no products are found in the database.
         """
         if not self.connection:
             raise DataPersistenceError("Database connection not established")
 
         try:
             with self.connection.cursor() as cursor:
-                cursor.execute("SELECT id, name, description, image_url, votes FROM products ORDER BY id")
+                cursor.execute(
+                    "SELECT id, name, description, image_url, votes FROM products ORDER BY id"
+                )
                 rows = cursor.fetchall()
+                if not rows or len(rows) == 0:
+                    raise ProductNotFoundError("No products found in database")
 
-                logging.info(f"Fetched {len(rows)} products from database") 
+                logging.info(f"Fetched {len(rows)} products from database")
                 return [
                     {
                         "id": str(row[0]),
@@ -213,6 +213,7 @@ class DatabaseManager:
             Optional[Dict[str, Any]]: Product data if found, None if not found.
 
         Raises:
+            ProductNotFoundError: If no product exists with the given ID.
             DataPersistenceError: If database connection is not established or query fails.
         """
         if not self.connection:
@@ -226,8 +227,8 @@ class DatabaseManager:
                 )
                 row = cursor.fetchone()
                 if not row:
-                    logging.error(f"Product with ID {product_id} not found in database")
-                    return None
+                    logging.error(f"Product with ID {product_id} not found in database in get_product_by_id()")
+                    raise ProductNotFoundError("Product not found in database")
                 
                 return {
                     "id": str(row[0]),
@@ -237,7 +238,7 @@ class DatabaseManager:
                     "votes": row[4] or 0,
                 }
         except psycopg2.Error as e:
-            logging.error(f"Database error in get_product_by_id: {e}")
+            logging.error(f"Database error in get_product_by_id(): {e}")
             raise DataPersistenceError("Error fetching product from database")
 
     def get_votes_for_product(self, product_id: int) -> int:
@@ -245,10 +246,10 @@ class DatabaseManager:
         
         Args:
             product_id (int): The ID of the product to get votes for.
-            
+
         Returns:
             int: The number of votes for the product.
-            
+  
         Raises:
             ProductNotFoundError: If no product exists with the given ID.
             DataPersistenceError: If database connection is not established or query fails.
@@ -261,12 +262,12 @@ class DatabaseManager:
                 cursor.execute("SELECT votes FROM products WHERE id = %s", (product_id,))
                 row = cursor.fetchone()
                 if not row:
-                    logging.error(f"Product with ID {product_id} not found in database")
+                    logging.error(f"Product with ID {product_id} not found in database in get_votes_for_product()")
                     raise ProductNotFoundError("Product not found in database")
                 
                 return row[0] or 0
         except psycopg2.Error as e:
-            logging.error(f"Database error in get_votes_for_product: {e}")
+            logging.error(f"Database error in get_votes_for_product(): {e}")
             raise DataPersistenceError("Error fetching votes for product from database")
 
     def add_vote(self, product_id: int) -> Dict[str, Any]:
@@ -297,10 +298,9 @@ class DatabaseManager:
                     logging.error(f"Product with ID {product_id} not found in database")
                     raise ProductNotFoundError("Product not found in database")
 
+                # Update vote count
                 product_name, current_votes = row
                 new_votes = (current_votes or 0) + 1
-
-                # Update vote count
                 cursor.execute(
                     "UPDATE products SET votes = %s WHERE id = %s",
                     (new_votes, product_id),
@@ -319,3 +319,4 @@ class DatabaseManager:
                 self.connection.rollback()
             logging.error(f"Error adding vote to database for product {product_id}: {e}")
             raise DataPersistenceError("Error adding vote to database for product")
+        

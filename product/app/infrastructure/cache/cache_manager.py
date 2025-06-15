@@ -21,12 +21,12 @@ class CacheManager:
         self.settings = settings
         self.redis_client: Optional[redis.Redis] = None
         self.cache_ttl = 3600  # Cache TTL in seconds (1 hour)
+        self.is_connected = False
 
     def connect(self) -> None:
         """Establish Redis connection.
 
-        Raises:
-            DataPersistenceError: If connection fails.
+        Sets is_connected to True if connection succeeds, False otherwise.
         """
         try:
             self.redis_client = redis.Redis(
@@ -36,8 +36,10 @@ class CacheManager:
             )
             # Test connection
             self.redis_client.ping()
+            self.is_connected = True
             logging.info(f"Redis connection established to {self.settings.redis_host}:{self.settings.redis_port}")
         except redis.RedisError as e:
+            self.is_connected = False
             logging.warning(f"Failed to connect to Redis: {e}")
             # Do not raise an error here, as the cache is not critical for the application to run
 
@@ -47,6 +49,7 @@ class CacheManager:
             return
         self.redis_client.close()
         self.redis_client = None
+        self.is_connected = False
         logging.info("Redis connection closed successfully")
 
     def get_product(self, product_id: int) -> Optional[Dict[str, Any]]:
@@ -58,9 +61,6 @@ class CacheManager:
         Returns:
             Optional[Dict[str, Any]]: The product data if found in cache, None otherwise.
         """
-        if not self.redis_client:
-            return None
-
         try:
             cached_data = self.redis_client.get(f"product:{product_id}")
             if not cached_data:
@@ -68,6 +68,7 @@ class CacheManager:
             return json.loads(cached_data)
         except (redis.RedisError, json.JSONDecodeError) as e:
             logging.warning(f"Error retrieving product {product_id} from cache: {e}")
+            return None
 
     def set_product(self, product_id: int, product_data: Dict[str, Any]) -> None:
         """Store product in cache.
@@ -76,9 +77,6 @@ class CacheManager:
             product_id: The ID of the product to store.
             product_data: The product data to cache.
         """
-        if not self.redis_client:
-            return
-
         try:
             self.redis_client.setex(
                 f"product:{product_id}",
@@ -94,9 +92,6 @@ class CacheManager:
         Args:
             product_id: The ID of the product to remove from cache.
         """
-        if not self.redis_client:
-            return
-
         try:
             self.redis_client.delete(f"product:{product_id}")
         except redis.RedisError as e:
@@ -108,9 +103,8 @@ class CacheManager:
         Returns:
             bool: True if connection is active, False otherwise.
         """
-        if not self.redis_client:
-            return False
         try:
-            return bool(self.redis_client.ping())
+            return bool(self.redis_client and self.redis_client.ping())
         except redis.RedisError:
+            self.is_connected = False
             return False
