@@ -30,14 +30,14 @@ class Settings(BaseSettings):
     templates_dir: str = "templates"
     static_dir: str = "static"
 
-    # Database configuration
-    db_host: Optional[str] = None
-    db_name: Optional[str] = None
-    db_user: Optional[str] = None
-    db_password: Optional[str] = None
-    db_port: int = 5432
+    # Database configuration (required)
+    postgres_user: str
+    postgres_password: str
+    postgres_db: str
+    postgres_host: str
+    postgres_port: int = 5432
 
-    # Redis configuration
+    # Redis configuration (optional for caching)
     redis_host: Optional[str] = None
     redis_port: int = 6379
 
@@ -51,7 +51,11 @@ class Settings(BaseSettings):
         """Log all settings at debug level if debugging is enabled."""
         logging.debug("Settings configuration:")
         for field_name, value in self.model_dump().items():
-            logging.debug(f"{field_name}: {value}")
+            # Don't log sensitive database password
+            if field_name == "db_password":
+                logging.debug(f"{field_name}: ***")
+            else:
+                logging.debug(f"{field_name}: {value}")
 
     def get_products_file_path(self) -> Path:
         """Get the full path to the products JSON file.

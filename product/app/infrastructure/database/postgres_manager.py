@@ -36,13 +36,13 @@ class PostgresManager:
 
         try:
             self.connection = psycopg2.connect(
-                host=self.settings.db_host,
-                database=self.settings.db_name,
-                user=self.settings.db_user,
-                password=self.settings.db_password,
-                port=self.settings.db_port
+                host=self.settings.postgres_host,
+                database=self.settings.postgres_db,
+                user=self.settings.postgres_user,
+                password=self.settings.postgres_password,
+                port=self.settings.postgres_port
             )
-            logging.info(f"Database connection established to {self.settings.db_host}:{self.settings.db_port}")
+            logging.info(f"Database connection established to {self.settings.postgres_host}:{self.settings.postgres_port}")
 
             self._initialize_schema()
         except psycopg2.Error as e:
