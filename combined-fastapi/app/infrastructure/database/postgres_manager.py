@@ -33,8 +33,6 @@ class PostgresManager:
         Raises:
             DataPersistenceError: If connection fails or schema initialization fails.
         """
-        if self.settings.data_source != "database":
-            return
 
         try:
             self.connection = psycopg2.connect(

@@ -2,7 +2,7 @@
 Data access layer for the Combined Origami Service.
 
 This module handles data operations for products with integrated votes,
-supporting both JSON file and database backends with Redis caching.
+supporting database backend with Redis caching.
 """
 
 import logging
@@ -12,10 +12,9 @@ from config import settings
 from core.exceptions import DataValidationError
 from infrastructure.cache.cache_manager import CacheManager
 from infrastructure.database.postgres_manager import PostgresManager
-from infrastructure.database.json_manager import JSONDataManager
 
 class DataAccessLayer:
-    """Main data access layer combining database/JSON operations with caching."""
+    """Main data access layer combining database operations with caching."""
 
     def __init__(self, settings):
         """Initialize the data access layer.
@@ -24,8 +23,7 @@ class DataAccessLayer:
             settings: Application settings.
         """
         self.settings = settings
-        self.db_manager = PostgresManager(settings) if settings.data_source == "database" else None
-        self.json_manager = JSONDataManager(settings) if settings.data_source == "json" else None
+        self.db_manager = PostgresManager(settings)
         self.cache_manager = CacheManager(settings)
 
     def initialize(self) -> None:
@@ -36,10 +34,7 @@ class DataAccessLayer:
         Raises:
             DataPersistenceError: If initialization fails.
         """
-        if self.db_manager:
-            self.db_manager.connect()
-        elif self.json_manager:
-            self.json_manager.load_products()
+        self.db_manager.connect()
         self.cache_manager.connect()
 
     def cleanup(self) -> None:
@@ -48,10 +43,7 @@ class DataAccessLayer:
         Raises:
             DataPersistenceError: If data source is not initialized or access fails.
         """
-        if self.db_manager:
-            self.db_manager.disconnect()
-        elif self.json_manager:
-            self.json_manager.save_products()
+        self.db_manager.disconnect()
         self.cache_manager.disconnect()
 
     def get_products(self) -> List[Dict[str, Any]]:
@@ -64,14 +56,8 @@ class DataAccessLayer:
             DataPersistenceError: If data access fails.
             ProductNotFoundError: If no products are found in the database.
         """
-        # Always get all products from primary storage to ensure we have the complete, up-to-date list
-        if self.db_manager:
-            logging.debug("Products fetched from database")
-            products = self.db_manager.get_products()
-        else:
-            logging.debug("Products fetched from JSON file")
-            products = self.json_manager.get_products()
-        return products
+        # Always get all products from database to ensure we have the complete, up-to-date list
+        return self.db_manager.get_products()
 
     def get_product_by_id(self, product_id: int) -> Optional[Dict[str, Any]]:
         """Get product by ID.
@@ -97,13 +83,9 @@ class DataAccessLayer:
                 logging.debug(f"Product fetched from cache for product: {product_id}")
                 return cached_product
 
-        # If not in cache, get from primary storage
-        if self.db_manager:
-            logging.debug(f"Product fetched from database for product: {product_id}")
-            product = self.db_manager.get_product_by_id(product_id)
-        else:
-            logging.debug(f"Product fetched from JSON file for product {product_id}")
-            product = self.json_manager.get_product_by_id(product_id)
+        # If not in cache, get from database
+        product = self.db_manager.get_product_by_id(product_id)
+        logging.debug(f"Product fetched from database for product: {product_id}")
 
         # Cache the result if connected
         if self.cache_manager.is_connected:
@@ -135,14 +117,8 @@ class DataAccessLayer:
                 logging.debug(f"Votes fetched from cache for product: {product_id}")
                 return cached_product.get('votes', 0)
 
-        if self.db_manager:
-            logging.debug(f"Votes fetched from database for product: {product_id}")
-            votes = self.db_manager.get_votes_for_product(product_id)
-        else:
-            logging.debug(f"Votes fetched from JSON file for product: {product_id}")
-            votes = self.json_manager.get_votes_for_product(product_id)
-
-        return votes
+        logging.debug(f"Votes fetched from database for product: {product_id}")
+        return self.db_manager.get_votes_for_product(product_id)
 
     def add_vote(self, product_id: int) -> Dict[str, Any]:
         """Add vote to product.
@@ -164,12 +140,8 @@ class DataAccessLayer:
         if product_id <= 0:
             raise DataValidationError("Product ID must be positive")
 
-        if self.db_manager:
-            logging.debug(f"Votes added to database for product: {product_id}")
-            product = self.db_manager.add_vote(product_id)
-        else:
-            logging.debug(f"Votes added to JSON file for product: {product_id}")
-            product = self.json_manager.add_vote(product_id)
+        logging.debug(f"Votes added to database for product: {product_id}")
+        product = self.db_manager.add_vote(product_id)
 
         # Invalidate cache if connected
         if self.cache_manager.is_connected:
@@ -184,11 +156,7 @@ class DataAccessLayer:
         Returns:
             bool: True if healthy, False otherwise.
         """
-        if self.db_manager:
-            db_healthy = self.db_manager.check_connection()
-        else:
-            db_healthy = self.json_manager.is_loaded()
-
+        db_healthy = self.db_manager.check_connection()
         cache_healthy = self.cache_manager.check_connection()
 
         return db_healthy and cache_healthy

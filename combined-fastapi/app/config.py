@@ -24,9 +24,6 @@ class Settings(BaseSettings):
     port: int = 8000
     log_level: str = "INFO"
 
-    # Data source configuration
-    data_source: str = "json"  # "json" or "database"
-
     # File paths
     base_dir: Path = Path(__file__).resolve().parent
     products_file: str = "data/products.json"

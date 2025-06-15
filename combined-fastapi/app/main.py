@@ -46,7 +46,6 @@ async def lifespan(app: FastAPI):
 
     # Startup
     logging.info(f"Starting {settings.app_title} v{settings.app_version}")
-    logging.info(f"Using data source: {settings.data_source}")
 
     # Initialize tracing
     resource = Resource.create({
@@ -64,10 +63,10 @@ async def lifespan(app: FastAPI):
     # Initialize data access layer
     try:
         data_access.initialize()
-        logging.info(f"Data source '{settings.data_source}' initialized successfully") 
+        logging.info("Database initialized successfully") 
 
         products = data_access.get_products()
-        logging.info(f"Loaded {len(products)} products from {settings.data_source}")
+        logging.info(f"Loaded {len(products)} products from database")
     except DataPersistenceError as e:
         logging.error(f"Failed to initialize data source: {e}")
         raise RuntimeError(f"Failed to initialize data source")
