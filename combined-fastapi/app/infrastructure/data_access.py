@@ -8,11 +8,11 @@ supporting both JSON file and database backends with Redis caching.
 import logging
 from typing import Dict, List, Optional, Any
 
-from app.config import settings
-from app.exceptions import ProductNotFoundError, DataValidationError, DataPersistenceError
-from app.cache_manager import CacheManager
-from app.database_manager import DatabaseManager
-from app.json_manager import JSONDataManager
+from config import settings
+from core.exceptions import DataValidationError
+from infrastructure.cache.cache_manager import CacheManager
+from infrastructure.database.postgres_manager import PostgresManager
+from infrastructure.database.json_manager import JSONDataManager
 
 class DataAccessLayer:
     """Main data access layer combining database/JSON operations with caching."""
@@ -24,7 +24,7 @@ class DataAccessLayer:
             settings: Application settings.
         """
         self.settings = settings
-        self.db_manager = DatabaseManager(settings) if settings.data_source == "database" else None
+        self.db_manager = PostgresManager(settings) if settings.data_source == "database" else None
         self.json_manager = JSONDataManager(settings) if settings.data_source == "json" else None
         self.cache_manager = CacheManager(settings)
 
@@ -36,21 +36,18 @@ class DataAccessLayer:
         Raises:
             DataPersistenceError: If initialization fails.
         """
-        try:
-            if self.db_manager:
-                self.db_manager.connect()
-            elif self.json_manager:
-                self.json_manager.load_products()
-
-            # Initialize cache connection
-            self.cache_manager.connect()
-
-        except Exception as e:
-            logging.error(f"Failed to initialize data access layer: {e}")
-            raise DataPersistenceError("Failed to initialize data access layer")
+        if self.db_manager:
+            self.db_manager.connect()
+        elif self.json_manager:
+            self.json_manager.load_products()
+        self.cache_manager.connect()
 
     def cleanup(self) -> None:
-        """Clean up resources."""
+        """Clean up resources.
+        
+        Raises:
+            DataPersistenceError: If data source is not initialized or access fails.
+        """
         if self.db_manager:
             self.db_manager.disconnect()
         elif self.json_manager:
@@ -65,6 +62,7 @@ class DataAccessLayer:
 
         Raises:
             DataPersistenceError: If data access fails.
+            ProductNotFoundError: If no products are found in the database.
         """
         # Always get all products from primary storage to ensure we have the complete, up-to-date list
         if self.db_manager:
@@ -73,7 +71,6 @@ class DataAccessLayer:
         else:
             logging.debug("Products fetched from JSON file")
             products = self.json_manager.get_products()
-
         return products
 
     def get_product_by_id(self, product_id: int) -> Optional[Dict[str, Any]]:
@@ -86,18 +83,19 @@ class DataAccessLayer:
             Optional[Dict[str, Any]]: Product data if found, None otherwise.
 
         Raises:
+            DataPersistenceError: If data source is not initialized or access fails.
             DataValidationError: If the product_id is not positive.
             ProductNotFoundError: If no product exists with the given ID.
-            DataPersistenceError: If data source is not initialized or access fails.
         """
         if product_id <= 0:
             raise DataValidationError("Product ID must be positive")
 
-        # Try cache first
-        cached_product = self.cache_manager.get_product(product_id)
-        if cached_product:
-            logging.debug(f"Product fetched from cache for product: {product_id}")
-            return cached_product
+        # Try cache first if connected
+        if self.cache_manager.is_connected:
+            cached_product = self.cache_manager.get_product(product_id)
+            if cached_product:
+                logging.debug(f"Product fetched from cache for product: {product_id}")
+                return cached_product
 
         # If not in cache, get from primary storage
         if self.db_manager:
@@ -107,13 +105,11 @@ class DataAccessLayer:
             logging.debug(f"Product fetched from JSON file for product {product_id}")
             product = self.json_manager.get_product_by_id(product_id)
 
-        if product is None:
-            logging.error(f"Product with ID {product_id} not found in data source")
-            raise ProductNotFoundError("Product not found in data source")
+        # Cache the result if connected
+        if self.cache_manager.is_connected:
+            self.cache_manager.set_product(product_id, product)
+            logging.debug(f"Product cached for product: {product_id}")
 
-        # Cache the result
-        self.cache_manager.set_product(product_id, product)
-        logging.debug(f"Product cached for product: {product_id}")
         return product
 
     def get_votes_for_product(self, product_id: int) -> int:
@@ -126,20 +122,19 @@ class DataAccessLayer:
             int: The number of votes for the product.
 
         Raises:
+            DataPersistenceError: If data source is not initialized or access fails.
             DataValidationError: If the product_id is not positive.
             ProductNotFoundError: If no product exists with the given ID.
-            DataPersistenceError: If data source is not initialized or access fails.
         """
         if product_id <= 0:
             raise DataValidationError("Product ID must be positive")
 
-        # Try to get from cache first
-        cached_product = self.cache_manager.get_product(product_id)
-        if cached_product:
-            logging.debug(f"Votes fetched from cache for product: {product_id}")
-            return cached_product.get('votes', 0)
+        if self.cache_manager.is_connected:
+            cached_product = self.cache_manager.get_product(product_id)
+            if cached_product:
+                logging.debug(f"Votes fetched from cache for product: {product_id}")
+                return cached_product.get('votes', 0)
 
-        # If not in cache, get from primary storage
         if self.db_manager:
             logging.debug(f"Votes fetched from database for product: {product_id}")
             votes = self.db_manager.get_votes_for_product(product_id)
@@ -162,11 +157,13 @@ class DataAccessLayer:
                 - message: A success message
 
         Raises:
+            DataPersistenceError: If data source is not initialized or access fails.
             DataValidationError: If the product_id is not positive.
             ProductNotFoundError: If no product exists with the given ID.
-            DataPersistenceError: If data source is not initialized or access fails.
         """
-        # Update in primary storage first
+        if product_id <= 0:
+            raise DataValidationError("Product ID must be positive")
+
         if self.db_manager:
             logging.debug(f"Votes added to database for product: {product_id}")
             product = self.db_manager.add_vote(product_id)
@@ -174,9 +171,11 @@ class DataAccessLayer:
             logging.debug(f"Votes added to JSON file for product: {product_id}")
             product = self.json_manager.add_vote(product_id)
 
-        # Invalidate cache entries
-        self.cache_manager.invalidate_product(product_id)
-        logging.debug(f"Product cache invalidated for product: {product_id}")
+        # Invalidate cache if connected
+        if self.cache_manager.is_connected:
+            self.cache_manager.invalidate_product(product_id)
+            logging.debug(f"Product cache invalidated for product: {product_id}")
+        
         return product
 
     def health_check(self) -> bool:

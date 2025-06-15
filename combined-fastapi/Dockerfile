@@ -28,7 +28,7 @@ RUN pip install --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY --chown=appuser:appuser app app/
+COPY --chown=appuser:appuser app/ ./
 
 EXPOSE 8000
 
@@ -41,4 +41,5 @@ ENV OTEL_TRACES_SAMPLER=always_on
 ENV PATH="/home/appuser/.local/bin:${PATH}"
 ENV PYTHONPATH="/app"
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

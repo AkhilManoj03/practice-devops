@@ -1,14 +1,14 @@
 """
 JSON manager for the Combined Origami Service.
 
-This module handles data operations for products with integrated votes.
+This module handles data operations for products with integrated votes using JSON files.
 """
 
 import json
 import logging
 from typing import Dict, List, Optional, Any
 
-from app.exceptions import ProductNotFoundError, DataPersistenceError
+from core.exceptions import ProductNotFoundError, DataPersistenceError, DataValidationError
 
 class JSONDataManager:
     """Data manager for JSON file-based data source with votes support."""
@@ -30,6 +30,7 @@ class JSONDataManager:
 
         Raises:
             DataPersistenceError: If there's an error reading or parsing the JSON file.
+            DataValidationError: If the products file does not contain a list.
         """
         products_file = self.settings.get_products_file_path()
 
@@ -44,7 +45,7 @@ class JSONDataManager:
                 products = json.load(f)
 
             if not isinstance(products, list):
-                raise ValueError("Products file must contain a list")
+                raise DataValidationError("Products file must contain a list")
 
             # Ensure all products have a votes field
             for product in products:
@@ -59,7 +60,7 @@ class JSONDataManager:
             raise DataPersistenceError("Failed to load products from json file")
         except Exception as e:
             logging.error(f"Unexpected Error loading products: {e}")
-            raise DataPersistenceError("Unexpected Error loading products from json file")
+            raise Exception("Unexpected Error loading products from json file")
 
     def save_products(self) -> None:
         """Save products to JSON file.
@@ -73,7 +74,7 @@ class JSONDataManager:
         products_file = self.settings.get_products_file_path()
 
         try:
-            # Ensure directory exists
+            # Ensure directory exists 
             products_file.parent.mkdir(parents=True, exist_ok=True)
 
             with open(products_file, 'w', encoding='utf-8') as f:
@@ -107,11 +108,11 @@ class JSONDataManager:
 
         Raises:
             DataPersistenceError: If products are not loaded.
+            ProductNotFoundError: If no product exists with the given ID.
         """
         if self._products_cache is None:
             raise DataPersistenceError("Products not loaded. Call load_products() first.")
 
-        # Handle both string and int IDs for flexibility
         product = next(
             (product for product in self._products_cache 
              if product.get('id') == str(product_id)),
@@ -119,7 +120,7 @@ class JSONDataManager:
         )
         if not product:
             logging.error(f"Product with ID {product_id} not found in cache")
-            return None
+            raise ProductNotFoundError("Product not found in cache")
 
         return product.copy()
 
@@ -170,7 +171,6 @@ class JSONDataManager:
         if self._products_cache is None:
             raise DataPersistenceError("Products not loaded. Call load_products() first.")
 
-        # Find product index
         product_index = next(
             (i for i, p in enumerate(self._products_cache) 
              if p.get('id') == str(product_id)),
@@ -181,16 +181,13 @@ class JSONDataManager:
             logging.error(f"Product with ID {product_id} not found in cache")
             raise ProductNotFoundError("Product not found in cache")
 
-        # Add vote
         current_votes = self._products_cache[product_index].get("votes", 0)
         new_votes = current_votes + 1
         self._products_cache[product_index]["votes"] = new_votes
 
-        # Save products - handle I/O errors as infrastructure errors
         try:
             self.save_products()
         except DataPersistenceError:
-            # Rollback the vote change
             self._products_cache[product_index]["votes"] = current_votes
             logging.warning(f"Rolled back vote for product {product_id} due to save failure")
             raise DataPersistenceError("Failed to save products to json file")
