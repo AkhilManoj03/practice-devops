@@ -29,6 +29,12 @@ async def get_all_origamis(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Unable to access origami data",
         )
+    except ProductNotFoundError as e:
+        logging.error(f"Origami not found in get_all_origamis(): {e}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Origami not found",
+        )
     except Exception as e:
         logging.error(f"Unexpected error in get_all_origamis(): {e}")
         raise HTTPException(
@@ -44,11 +50,11 @@ async def get_origami(
     """Get a specific origami with its vote count (alias for product)."""
     try:
         return await product_service.get_product_by_id(origami_id)
-    except ProductNotFoundError as e:
-        logging.error(f"Origami not found in get_origami({origami_id}): {e}")
+    except DataPersistenceError as e:
+        logging.error(f"Infrastructure error in get_origami({origami_id}): {e}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Origami not found",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to access origami data"
         )
     except DataValidationError as e:
         logging.error(f"Data validation error in get_origami({origami_id}): {e}")
@@ -56,11 +62,11 @@ async def get_origami(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Error validating origami data",
         )
-    except DataPersistenceError as e:
-        logging.error(f"Infrastructure error in get_origami({origami_id}): {e}")
+    except ProductNotFoundError as e:
+        logging.error(f"Origami not found in get_origami({origami_id}): {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Unable to access origami data"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Origami not found",
         )
     except Exception as e:
         logging.error(f"Unexpected error in get_origami({origami_id}): {e}")
@@ -110,6 +116,12 @@ async def vote_for_origami(
     """Vote for a specific origami."""
     try:
         return await vote_service.add_vote(origami_id)
+    except DataPersistenceError as e:
+        logging.error(f"Infrastructure error in vote_for_origami({origami_id}): {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to save vote data",
+        )
     except DataValidationError as e:
         logging.error(f"Data validation error in vote_for_origami({origami_id}): {e}")
         raise HTTPException(
@@ -121,12 +133,6 @@ async def vote_for_origami(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Origami not found",
-        )
-    except DataPersistenceError as e:
-        logging.error(f"Infrastructure error in vote_for_origami({origami_id}): {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Unable to save vote data",
         )
     except Exception as e:
         logging.error(f"Unexpected error in vote_for_origami({origami_id}): {e}")

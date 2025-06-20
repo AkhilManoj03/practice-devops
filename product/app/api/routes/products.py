@@ -29,6 +29,12 @@ async def get_products(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Unable to access product data",
         )
+    except ProductNotFoundError as e:
+        logging.error(f"Product not found in get_products(): {e}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Products not found",
+        )
     except Exception as e:
         logging.error(f"Unexpected error in get_products(): {e}")
         raise HTTPException(
@@ -44,11 +50,11 @@ async def get_product(
     """Get a specific product by ID with its vote count."""
     try:
         return await product_service.get_product_by_id(product_id)
-    except ProductNotFoundError as e:
-        logging.error(f"Product not found in get_product({product_id}): {e}")
+    except DataPersistenceError as e:
+        logging.error(f"Infrastructure error in get_product({product_id}): {e}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Product not found",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Unable to access product data",
         )
     except DataValidationError as e:
         logging.error(f"Data validation error in get_product({product_id}): {e}")
@@ -56,11 +62,11 @@ async def get_product(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Error validating product data",
         )
-    except DataPersistenceError as e:
-        logging.error(f"Infrastructure error in get_product({product_id}): {e}")
+    except ProductNotFoundError as e:
+        logging.error(f"Product not found in get_product({product_id}): {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Unable to access product data"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Product not found",
         )
     except Exception as e:
         logging.error(f"Unexpected error in get_product({product_id}): {e}")
