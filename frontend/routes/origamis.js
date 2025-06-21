@@ -1,12 +1,13 @@
 const express = require('express');
 const axios = require('axios');
+const { requireAuth } = require('./auth');
 const router = express.Router();
 
 // Voting Service base URL
 const VOTING_SERVICE_BASE_URL = 'http://products:8000';
 
-// Vote for an Origami
-router.post('/:origamiId/vote', async (req, res, next) => {
+// Vote for an Origami - now requires authentication
+router.post('/:origamiId/vote', requireAuth, async (req, res, next) => {
     try {
         await axios.post(`${VOTING_SERVICE_BASE_URL}/api/origamis/${req.params.origamiId}/vote`);
         res.status(200).send('Vote recorded!');

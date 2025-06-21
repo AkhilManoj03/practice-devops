@@ -137,3 +137,56 @@ footer {
   cursor: pointer;
 }
 
+/* Authentication styles */
+.vote-login-btn {
+    background: #6c757d !important;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 5px 0;
+}
+
+.vote-login-btn:hover {
+    background: #5a6268 !important;
+}
+
+.product button {
+    background: #28a745;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 5px 0;
+    transition: background-color 0.3s;
+}
+
+.product button:hover {
+    background: #218838;
+}
+
+.product button:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+}
+
+/* Authentication header responsiveness */
+@media (max-width: 768px) {
+    .auth-header {
+        text-align: center;
+        padding: 10px;
+    }
+    
+    .auth-header .user-info {
+        display: block;
+        margin: 0 0 10px 0;
+    }
+    
+    .auth-required {
+        text-align: center;
+        font-size: 14px;
+    }
+}
+

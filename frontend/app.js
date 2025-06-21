@@ -2,7 +2,10 @@ const express = require('express');
 const axios = require('axios');
 const os = require('os');
 const fs = require('fs');
+const session = require('express-session');
 const origamisRouter = require('./routes/origamis');
+const { router: authRouter } = require('./routes/auth');
+
 // Configuration from environment variables
 const config = {
   productsApiBaseUri: process.env.PRODUCTS_API_BASE_URI || 'http://products:8000',
@@ -13,7 +16,26 @@ const config = {
 
 const app = express();
 
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'craftista-secret-key-change-in-production',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: false, // Set to true in production with HTTPS
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Body parsing middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 app.set('view engine', 'ejs');
+
+// Routes
+app.use('/auth', authRouter);
 app.use('/api/origamis', origamisRouter);
 
 // Endpoint to serve product data to client
@@ -37,13 +59,28 @@ app.get('/', async (req, res) => {
       isKubernetes: fs.existsSync('/var/run/secrets/kubernetes.io')
     };
 
+    // Check if user is authenticated
+    const isAuthenticated = req.session && req.session.userId;
+    const username = req.session ? req.session.username : null;
+
     res.render('index', {
       systemInfo: systemInfo,
       app_version: config.version,
+      isAuthenticated: isAuthenticated,
+      username: username
     });
   } catch (error) {
     res.status(500).send('Error rendering home page');
   }
+});
+
+// Login page
+app.get('/login', (req, res) => {
+  // If already logged in, redirect to home
+  if (req.session && req.session.userId) {
+    return res.redirect('/');
+  }
+  res.render('login');
 });
 
 function getIPAddress() {

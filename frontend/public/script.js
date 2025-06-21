@@ -64,11 +64,18 @@ function renderProducts(products, canVote) {
   products.forEach(product => {
     const productElement = document.createElement('div');
     productElement.className = 'product';
+    
+    // Use window.isAuthenticated
+    const canUserVote = window.isAuthenticated;
+    const voteButton = canUserVote ? 
+      `<button onclick="submitVote(${product.id})">Vote 👍</button>` : 
+      `<button onclick="redirectToLogin()" class="vote-login-btn">Login to Vote 👍</button>`;
+    
     productElement.innerHTML = `
       <h3>${product.name}</h3>
       <img src="${product.image_url}" alt="${product.name}" />
       <p id="votes-${product.id}">Votes: Loading...</p>
-      ${canVote ? `<button onclick="submitVote(${product.id})">Vote 👍</button>` : ''}
+      ${voteButton}
       <p class="description" id="desc-${product.id}">${shortenDescription(product.description)}</p>
       <a href="#" class="read-more" data-desc-id="desc-${product.id}">Read More</a>
       <p class="full-description hidden" id="full-desc-${product.id}">${product.description}</p>
@@ -98,6 +105,9 @@ function submitVote(productId) {
             //alert('Thank you for your vote!');
             // Optionally, re-fetch and update the vote count display
             fetchVotesForOrigami(productId);
+        } else if (response.status === 401) {
+            alert('Please login to vote!');
+            redirectToLogin();
         } else {
             alert('Vote did not get registered. Try again later.');
         }
@@ -106,6 +116,10 @@ function submitVote(productId) {
         console.error('Error submitting vote:', error);
         alert('An error occurred while submitting your vote. Please try again later.');
     });
+}
+
+function redirectToLogin() {
+    window.location.href = '/login';
 }
 
 
