@@ -1,5 +1,6 @@
 FROM --platform=linux/amd64 node:22-alpine
 
+# Set the working directory inside the container
 WORKDIR /app
 
 # Create non-root user
@@ -16,7 +17,7 @@ RUN apk add --no-cache && \
 USER appuser
 
 # Copy package files for dependency installation
-COPY --chown=appuser:appuser package.json config.json ./
+COPY --chown=appuser:appuser package*.json ./
 
 # Install Node.js dependencies
 RUN npm install --no-audit --no-fund --prefer-offline && \

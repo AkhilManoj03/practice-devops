@@ -2,8 +2,14 @@ const express = require('express');
 const axios = require('axios');
 const os = require('os');
 const fs = require('fs');
-const config = require('./config.json'); // Import configuration
 const origamisRouter = require('./routes/origamis');
+// Configuration from environment variables
+const config = {
+  productsApiBaseUri: process.env.PRODUCTS_API_BASE_URI || 'http://products:8000',
+  recommendationBaseUri: process.env.RECOMMENDATION_BASE_URI || 'http://recommendation:8080',
+  votingBaseUri: process.env.VOTING_BASE_URI || 'http://products:8000',
+  version: process.env.APP_VERSION || '1.0.0'
+};
 
 const app = express();
 

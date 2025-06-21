@@ -3,12 +3,12 @@ const chai = require('chai');
 const chaiHttp = require('chai-http');
 const server = require('../app'); // Adjust path accordingly
 const expect = chai.expect;
-const config = require('./../config.json'); // path to config file
 const should = chai.should();
 
 chai.use(chaiHttp);
 
-const productsApiBaseUri = config.productsApiBaseUri;
+// Configuration from environment variables
+const productsApiBaseUri = process.env.PRODUCTS_API_BASE_URI || 'http://products:8000';
 
 describe('App', () => {
    
