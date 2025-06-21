@@ -6,8 +6,65 @@
     <link rel="stylesheet" href="/css/styles.css">
     <title>Craftista - Origami Marketplace</title>
     <script src="/script.js" defer></script>
+    <style>
+        .auth-header {
+            background: #f8f9fa;
+            padding: 10px 20px;
+            border-bottom: 1px solid #dee2e6;
+            text-align: right;
+        }
+        
+        .auth-header .user-info {
+            display: inline-block;
+            margin-right: 15px;
+            color: #333;
+        }
+        
+        .auth-header .btn {
+            background: #007bff;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            text-decoration: none;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        
+        .auth-header .btn:hover {
+            background: #0056b3;
+        }
+        
+        .auth-header .btn-danger {
+            background: #dc3545;
+        }
+        
+        .auth-header .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .auth-required {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
+    <!-- Authentication Header -->
+    <div class="auth-header">
+        <% if (isAuthenticated) { %>
+            <span class="user-info">Welcome, <strong><%= username %></strong>!</span>
+            <button class="btn btn-danger" onclick="logout()">Logout</button>
+        <% } else { %>
+            <a href="/login" class="btn">Login / Register</a>
+        <% } %>
+    </div>
+
     <header>
         <img src="/images/logo.png" alt="Craftista Logo" class="logo">
         <h1>Craftista - Fold, Admire and Vote</h1>
@@ -51,5 +108,33 @@
         <p>&copy; <%= new Date().getFullYear() %> Initcron Systems Private Limited</p>
     </footer>
 
+    <script>
+        // Pass authentication status to JavaScript
+        window.isAuthenticated = <%= JSON.stringify(isAuthenticated) %>;
+        
+        // Logout function
+        async function logout() {
+            try {
+                const response = await fetch('/auth/logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'include' // Include cookies in the request
+                });
+
+                if (response.ok) {
+                    // JWT cookie is cleared by the server
+                    // Redirect to login page instead of reloading
+                    window.location.href = '/login';
+                } else {
+                    alert('Logout failed. Please try again.');
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+                alert('Network error during logout. Please try again.');
+            }
+        }
+    </script>
 </body>
 </html>

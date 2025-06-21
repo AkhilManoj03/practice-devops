@@ -2,7 +2,10 @@ const express = require('express');
 const axios = require('axios');
 const os = require('os');
 const fs = require('fs');
+const cookieParser = require('cookie-parser');
 const origamisRouter = require('./routes/origamis');
+const { router: authRouter } = require('./routes/auth');
+
 // Configuration from environment variables
 const config = {
   productsApiBaseUri: process.env.PRODUCTS_API_BASE_URI || 'http://products:8000',
@@ -13,7 +16,26 @@ const config = {
 
 const app = express();
 
+// Cookie parsing middleware
+app.use(cookieParser());
+
+// Body parsing middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Middleware to extract JWT token from HTTP-only cookie and make it available to routes
+app.use((req, res, next) => {
+  // Extract JWT token from HTTP-only cookie and make it available to routes
+  if (req.cookies && req.cookies.jwt_token) {
+    req.jwt_token = req.cookies.jwt_token;
+  }
+  next();
+});
+
 app.set('view engine', 'ejs');
+
+// Routes
+app.use('/auth', authRouter);
 app.use('/api/origamis', origamisRouter);
 
 // Endpoint to serve product data to client
@@ -37,13 +59,28 @@ app.get('/', async (req, res) => {
       isKubernetes: fs.existsSync('/var/run/secrets/kubernetes.io')
     };
 
+    // Check if user is authenticated via JWT token and username cookie
+    const isAuthenticated = !!(req.jwt_token && req.cookies.username);
+    const username = req.cookies.username || null;
+
     res.render('index', {
       systemInfo: systemInfo,
       app_version: config.version,
+      isAuthenticated: isAuthenticated,
+      username: username
     });
   } catch (error) {
     res.status(500).send('Error rendering home page');
   }
+});
+
+// Login page
+app.get('/login', (req, res) => {
+  // If already logged in (has both JWT token and username), redirect to home
+  if (req.jwt_token && req.cookies.username) {
+    return res.redirect('/');
+  }
+  res.render('login');
 });
 
 function getIPAddress() {
