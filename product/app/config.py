@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     port: int = 8000
     log_level: str = "INFO"
 
+    # Authentication settings
+    auth_service_url: str = "http://authentication:8080"
+    product_key_id: str = "product-service-key-1"
+
     # File paths
     base_dir: Path = Path(__file__).resolve().parent
     products_file: str = "data/products.json"

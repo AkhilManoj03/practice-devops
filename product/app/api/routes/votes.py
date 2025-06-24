@@ -7,12 +7,12 @@ This module contains all voting-related API endpoints.
 import logging
 from typing import List, Dict, Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 
 from core.models import Product, VoteResponse
 from core.exceptions import ProductNotFoundError, DataValidationError, DataPersistenceError
 from core.services import ProductService, VoteService
-from api.dependencies import get_product_service, get_vote_service
+from api.dependencies import get_product_service, get_vote_service, require_authentication
 
 router = APIRouter(prefix="/api", tags=["Origamis", "Votes"])
 
@@ -110,11 +110,17 @@ async def get_votes(
 
 @router.post("/origamis/{origami_id}/vote", response_model=VoteResponse, tags=["Votes"])
 async def vote_for_origami(
+    request: Request,
     origami_id: int,
-    vote_service: VoteService = Depends(get_vote_service)
+    vote_service: VoteService = Depends(get_vote_service),
+    jwt_payload: Dict[str, Any] = Depends(require_authentication)
 ) -> VoteResponse:
-    """Vote for a specific origami."""
+    """Vote for a specific origami (requires authentication)."""
     try:
+        # Log the authenticated user
+        username = jwt_payload.get("sub", "unknown")
+        logging.debug(f"User {username} voting for origami {origami_id}")
+        
         return await vote_service.add_vote(origami_id)
     except DataPersistenceError as e:
         logging.error(f"Infrastructure error in vote_for_origami({origami_id}): {e}")
