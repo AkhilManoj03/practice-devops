@@ -12,3 +12,5 @@ redis>=5.0.1
 opentelemetry-distro
 opentelemetry-exporter-otlp
 opentelemetry-instrumentation-fastapi
+pyjwt[crypto]>=2.8.0
+cryptography>=3.4.8

@@ -12,6 +12,7 @@ services:
     depends_on:
       - products
       - recommendation
+      - products-db
     networks:
       - app-network
 

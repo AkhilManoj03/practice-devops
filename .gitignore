@@ -37,3 +37,7 @@ ENV/
 
 # Local development
 .DS_Store
+
+# Keys
+*.pem
+

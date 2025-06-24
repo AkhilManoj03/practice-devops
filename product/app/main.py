@@ -30,6 +30,7 @@ from api import (
     frontend_router,
     http_exception_handler
 )
+from api.middleware import JWTMiddleware
 
 # Application Lifecycle Management
 @asynccontextmanager
@@ -48,17 +49,17 @@ async def lifespan(app: FastAPI):
     logging.info(f"Starting {settings.app_title} v{settings.app_version}")
 
     # Initialize tracing
-    resource = Resource.create({
-        "service.name": os.environ.get("OTEL_SERVICE_NAME", "products-api"),
-        "service.version": os.environ.get("APP_VERSION", "1.0.0"),
-        "deployment.environment": "production",
-    })
-    tracer_provider = TracerProvider(resource=resource)
-    otlp_exporter = OTLPSpanExporter(
-        os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4318/v1/traces"),
-    )
-    tracer_provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
-    trace.set_tracer_provider(tracer_provider)
+    # resource = Resource.create({
+    #     "service.name": os.environ.get("OTEL_SERVICE_NAME", "products-api"),
+    #     "service.version": os.environ.get("APP_VERSION", "1.0.0"),
+    #     "deployment.environment": "production",
+    # })
+    # tracer_provider = TracerProvider(resource=resource)
+    # otlp_exporter = OTLPSpanExporter(
+    #     os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "http://otel-collector:4318/v1/traces"),
+    # )
+    # tracer_provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
+    # trace.set_tracer_provider(tracer_provider)
 
     # Initialize data access layer
     try:
@@ -101,7 +102,10 @@ app = FastAPI(
 )
 
 # Add OpenTelemetry instrumentation
-FastAPIInstrumentor.instrument_app(app)
+# FastAPIInstrumentor.instrument_app(app)
+
+# Add JWT middleware
+app.add_middleware(JWTMiddleware)
 
 # Mount static files
 static_dir = settings.get_static_dir()
