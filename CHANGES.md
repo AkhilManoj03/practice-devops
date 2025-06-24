@@ -85,7 +85,7 @@ and testing
   - Service dependency mapping
   - Improved system observability and maintainability
 
-**Related PR**: [otel: Implement OpenTelementary and Jaegar #7](https://github.com/AkhilManoj03/practice-devops/pull/8)
+**Related PR**: [otel: Implement OpenTelementary and Jaegar #8](https://github.com/AkhilManoj03/practice-devops/pull/8)
 
 ### 8. Application Architecture Restructuring and Cleanup
 - **Restructured Combined FastAPI Service**: Reorganized the application into distinct architectural layers
@@ -108,7 +108,26 @@ and testing
   - Simplified configuration management
   - Better alignment with production-ready practices
 
-**Related PR**: [product: refactor: restructure application architecture and remove JSON datasource #8](https://github.com/AkhilManoj03/practice-devops/pull/9)
+**Related PR**: [product: refactor: restructure application architecture and remove JSON datasource #9](https://github.com/AkhilManoj03/practice-devops/pull/9)
+
+### 0. Addition of Authentication Service
+- **New Microservice**: Introduced a Rust-based authentication service using the Axum framework
+- **Features**:
+  - User registration and login with bcrypt password hashing
+  - JWT token generation (RS256, 1-hour expiration, user roles)
+  - JWKS and OpenID Connect endpoints for standards-based integration
+  - Role-based access control for secure API usage
+  - CORS support and structured logging
+- **Integration**:
+  - Frontend uses the authentication service for user login/registration; JWT tokens are set as 
+  HTTP-only cookies
+  - Product service validates JWT tokens using the JWKS endpoint, ensuring only authenticated users 
+  can access protected endpoints (e.g., voting)
+- **Security**:
+  - BCrypt for password hashing, RSA for JWT signing
+  - Environment-based configuration for database and key management
+
+**Related PR**: [auth: implement authentication microservice #9](https://github.com/AkhilManoj03/practice-devops/pull/9)
 
 ## Learning Outcomes
 This project has provided valuable hands-on experience in:
