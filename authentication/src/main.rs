@@ -329,7 +329,7 @@ async fn jwks() -> Result<Json<JwksResponse>, (StatusCode, String)> {
 
 // OpenID Connect Discovery endpoint
 async fn openid_configuration() -> Json<OpenIdConfiguration> {
-    let base_url = env::var("BASE_URL").unwrap_or_else(|_| "http://authentication:8080".to_string());
+    let base_url = env::var("BASE_URL").unwrap_or_else(|_| "http://authentication:8082".to_string());
     
     Json(OpenIdConfiguration {
         issuer: base_url.clone(),
@@ -380,7 +380,7 @@ async fn main() {
         .layer(CorsLayer::permissive())
         .with_state(pool);
 
-    let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
+    let port = env::var("PORT").unwrap_or_else(|_| "8082".to_string());
     let addr = format!("0.0.0.0:{}", port);
     
     info!("Authentication service starting on {}", addr);

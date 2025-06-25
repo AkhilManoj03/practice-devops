@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     # Authentication settings
-    auth_service_url: str = "http://authentication:8080"
+    auth_service_url: str = "http://authentication:8082"
     product_key_id: str = "product-service-key-1"
 
     # File paths

@@ -3,7 +3,7 @@ const axios = require('axios');
 const router = express.Router();
 
 // Authentication service configuration
-const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://authentication:8080';
+const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL || 'http://authentication:8082';
 
 // Middleware to check if user is authenticated
 const requireAuth = (req, res, next) => {
