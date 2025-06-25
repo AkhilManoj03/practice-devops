@@ -1,5 +1,9 @@
+# Build arguments for version control
+ARG GO_VERSION=1.23.10
+ARG ALPINE_VERSION=3.22
+
 # Build stage
-FROM golang:1.23-alpine AS builder
+FROM golang:${GO_VERSION}-alpine${ALPINE_VERSION} AS builder
 
 WORKDIR /build
 
@@ -27,7 +31,7 @@ RUN CGO_ENABLED=0 \
 
 
 # Runtime stage
-FROM alpine:3.22.0
+FROM alpine:${ALPINE_VERSION}.0
 
 # Install runtime dependencies
 RUN apk add --no-cache ca-certificates tzdata && \

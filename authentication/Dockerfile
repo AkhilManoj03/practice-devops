@@ -1,5 +1,9 @@
+# Build arguments for version control
+ARG RUST_VERSION=1.87.0
+ARG ALPINE_VERSION=3.22
+
 # Build stage
-FROM rust:1.87.0-alpine3.22 AS builder
+FROM rust:${RUST_VERSION}-alpine${ALPINE_VERSION} AS builder
 
 # Install build dependencies for Alpine
 RUN apk add --no-cache musl-dev pkgconf openssl-dev
@@ -17,7 +21,7 @@ RUN cargo build --release
 
 
 # Runtime stage
-FROM alpine:3.22.0
+FROM alpine:${ALPINE_VERSION}.0
 
 # Install runtime dependencies
 RUN apk add --no-cache ca-certificates libgcc
