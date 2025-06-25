@@ -1,30 +1,52 @@
-FROM --platform=linux/amd64 golang:1.23-alpine
+# Build stage
+FROM golang:1.23-alpine AS builder
 
-WORKDIR /app
+WORKDIR /build
 
-# Add necessary build tools
-RUN apk add --no-cache git
+# Install build dependencies
+RUN apk add --no-cache git ca-certificates
 
-# Create non-root user
-RUN addgroup -S -g 1001 appuser && \
-    adduser -S -G appuser -u 1001 -h /home/appuser appuser && \
-    chown -R appuser:appuser /app
+# Copy go mod files
+COPY go.mod go.sum ./
 
-# Copy go mod files first for better caching
-COPY --chown=appuser:appuser go.mod go.sum ./
-
-# Download dependencies and verify modules
+# Download dependencies
 RUN go mod download && \
     go mod verify
 
-# Copy the rest of the application
-COPY --chown=appuser:appuser . .
+# Copy source code
+COPY . .
 
-# Update go.mod and go.sum
+# Ensure go.mod and go.sum are up to date
 RUN go mod tidy
 
-# Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o app
+# Build the application with optimizations for static binary
+RUN CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64 \
+    go build -ldflags='-w -s -extldflags "-static"' -o app .
+
+
+# Runtime stage
+FROM alpine:3.22.0
+
+# Install runtime dependencies
+RUN apk add --no-cache ca-certificates tzdata && \
+    rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -S -g 1001 appuser && \
+    adduser -S -G appuser -u 1001 -h /home/appuser appuser
+
+WORKDIR /app
+
+# Copy the binary from builder stage
+COPY --from=builder --chown=appuser:appuser /build/app ./app
+
+# Copy necessary runtime files
+COPY --chown=appuser:appuser config.json ./
+COPY --chown=appuser:appuser static/ ./static/
+COPY --chown=appuser:appuser templates/ ./templates/
+COPY --chown=appuser:appuser data/ ./data/
 
 # Switch to non-root user
 USER appuser

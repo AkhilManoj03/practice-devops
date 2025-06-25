@@ -1,0 +1,49 @@
+# Documentation
+README.md
+*.md
+
+# Test files and directories
+tests/
+*_test.go
+*.test
+
+# Git and version control
+.git
+.gitignore
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.out
+
+# Temporary and log files
+*.log
+*.tmp
+.tmp/
+
+# Docker files
+Dockerfile
+.dockerignore
+
+# Environment and config files that might contain secrets
+.env
+.env.local 
