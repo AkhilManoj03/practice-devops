@@ -95,6 +95,7 @@ struct OpenIdConfiguration {
 fn load_private_key() -> Result<EncodingKey, Box<dyn std::error::Error>> {
     let private_key_path = env::var("RSA_PRIVATE_KEY_PATH")
         .unwrap_or_else(|_| "keys/private_key.pem".to_string());
+    info!("Loading private key from: {}", private_key_path);
     
     let private_key_pem = fs::read_to_string(&private_key_path)
         .map_err(|e| format!("Failed to read private key from {}: {}", private_key_path, e))?;
@@ -107,6 +108,7 @@ fn load_private_key() -> Result<EncodingKey, Box<dyn std::error::Error>> {
 fn load_public_key_for_jwks() -> Result<RsaPublicKey, Box<dyn std::error::Error>> {
     let public_key_path = env::var("RSA_PUBLIC_KEY_PATH")
         .unwrap_or_else(|_| "keys/public_key.pem".to_string());
+    info!("Loading public key from: {}", public_key_path);
     
     let public_key_pem = fs::read_to_string(&public_key_path)
         .map_err(|e| format!("Failed to read public key from {}: {}", public_key_path, e))?;
@@ -228,6 +230,7 @@ async fn login(
 
 // Placeholder for future authentication endpoints
 async fn auth_status() -> Json<serde_json::Value> {
+    info!("Authentication status endpoint called");
     Json(serde_json::json!({
         "authenticated": false,
         "message": "Authentication service is ready for implementation"
@@ -238,6 +241,7 @@ async fn register(
     State(pool): State<PgPool>,
     Json(payload): Json<RegisterRequest>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+    info!("Register endpoint called");
     // Check if username or email already exists
     let existing_user = sqlx::query("SELECT username, email FROM users WHERE username = $1 OR email = $2")
         .bind(&payload.username)
@@ -298,6 +302,7 @@ async fn register(
 
 // JWKS endpoint for public key distribution
 async fn jwks() -> Result<Json<JwksResponse>, (StatusCode, String)> {
+    info!("JWKS endpoint called");
     use base64::{Engine as _, engine::general_purpose};
     use rsa::traits::PublicKeyParts;
     
@@ -337,7 +342,8 @@ async fn jwks() -> Result<Json<JwksResponse>, (StatusCode, String)> {
 
 // OpenID Connect Discovery endpoint
 async fn openid_configuration() -> Json<OpenIdConfiguration> {
-    let base_url = env::var("BASE_URL").unwrap_or_else(|_| "http://authentication:8080".to_string());
+    info!("OpenID configuration endpoint called");
+    let base_url = env::var("BASE_URL").unwrap_or_else(|_| "http://authentication:8082".to_string());
     
     Json(OpenIdConfiguration {
         issuer: base_url.clone(),
