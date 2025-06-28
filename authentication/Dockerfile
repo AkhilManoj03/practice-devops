@@ -70,5 +70,12 @@ EXPOSE 8080
 ENV RUST_LOG=info
 ENV PORT=8080
 
+# Set OpenTelemetry environment variables
+ENV OTEL_SERVICE_NAME=authentication-api
+ENV OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+ENV OTEL_TRACES_SAMPLER=always_on
+ENV APP_VERSION=1.0.0
+ENV DEPLOYMENT_ENVIRONMENT=production
+
 # Run the application with explicit path
 CMD ["/app/authentication-service"]

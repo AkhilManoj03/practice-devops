@@ -14,8 +14,16 @@ use sqlx::postgres::{PgPool, PgRow};
 use sqlx::Row;
 use std::{env, fs};
 use tower_http::cors::CorsLayer;
-use tracing::{error, info, Level};
+use tower_http::trace::TraceLayer;
+use tracing::{error, info};
 use rsa::{RsaPublicKey, pkcs1::DecodeRsaPublicKey, pkcs8::DecodePublicKey};
+use opentelemetry::global;
+use opentelemetry::KeyValue;
+use opentelemetry::trace::TracerProvider;
+use opentelemetry_otlp::{SpanExporter, WithExportConfig, Protocol};
+use opentelemetry_sdk::trace::SdkTracerProvider;
+use opentelemetry_sdk::Resource;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
 
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -343,15 +351,69 @@ async fn openid_configuration() -> Json<OpenIdConfiguration> {
     })
 }
 
+// Create resource with service information
+fn get_resource() -> Resource {
+    let service_name = env::var("OTEL_SERVICE_NAME")
+        .unwrap_or_else(|_| "craftista-authentication".to_string());
+    let service_version = env::var("APP_VERSION")
+        .unwrap_or_else(|_| "1.0.0".to_string());
+    let environment = env::var("DEPLOYMENT_ENVIRONMENT")
+        .unwrap_or_else(|_| "production".to_string());
+
+    Resource::builder()
+        .with_service_name(service_name)
+        .with_attributes(vec![
+            KeyValue::new("service.version", service_version),
+            KeyValue::new("deployment.environment", environment),
+        ])
+        .build()
+}
+
+// Initialize OpenTelemetry tracer  
+fn init_tracer() -> SdkTracerProvider {
+    let otlp_endpoint = env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
+        .unwrap_or_else(|_| "http://otel-collector:4318".to_string());
+    
+    info!("Initializing OpenTelemetry tracer with endpoint: {}", otlp_endpoint);
+
+    // Configure OTLP exporter using HTTP
+    let exporter = SpanExporter::builder()
+        .with_http()
+        .with_endpoint(otlp_endpoint)
+        .with_protocol(Protocol::HttpBinary)
+        .build()
+        .expect("Failed to build exporter");
+    
+    // Create tracer provider
+    SdkTracerProvider::builder()
+        .with_resource(get_resource())
+        .with_batch_exporter(exporter)
+        .build()
+}
+
 #[tokio::main]
 async fn main() {
     // Load environment variables
     dotenv().ok();
 
     // Initialize tracing
-    tracing_subscriber::fmt()
-        .with_max_level(Level::INFO)
-        .with_target(false)
+    let tracer_provider = init_tracer();
+    global::set_tracer_provider(tracer_provider.clone());
+    let tracer = tracer_provider.tracer("craftista-authentication");
+    let otel_layer = tracing_opentelemetry::layer().with_tracer(tracer);
+    // Create fmt layer to suppress noisy OpenTelemetry debug logs
+    let filter_fmt = EnvFilter::new("info")
+        .add_directive("opentelemetry=info".parse().unwrap())
+        .add_directive("opentelemetry_sdk=warn".parse().unwrap())
+        .add_directive("opentelemetry_otlp=warn".parse().unwrap())
+        .add_directive("opentelemetry_http=warn".parse().unwrap());
+    let fmt_layer = tracing_subscriber::fmt::layer()
+        .with_thread_names(true)
+        .with_filter(filter_fmt);
+    // Initialize tracing subscriber with both layers
+    tracing_subscriber::registry()
+        .with(otel_layer)
+        .with(fmt_layer)
         .init();
 
     // Set up database connection from individual environment variables
@@ -378,6 +440,7 @@ async fn main() {
         .route("/.well-known/jwks.json", get(jwks))
         .route("/.well-known/openid-configuration", get(openid_configuration))
         .layer(CorsLayer::permissive())
+        .layer(TraceLayer::new_for_http())
         .with_state(pool);
 
     let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
@@ -386,5 +449,26 @@ async fn main() {
     info!("Authentication service starting on {}", addr);
     
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    
+    // Clone tracer provider for shutdown
+    let tracer_provider_for_shutdown = tracer_provider.clone();
+    
+    // Set up graceful shutdown
+    let shutdown_signal = async move {
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to install CTRL+C signal handler");
+        info!("Received shutdown signal, cleaning up...");
+        
+        // Shutdown tracer provider to ensure all spans are exported
+        if let Err(e) = tracer_provider_for_shutdown.shutdown() {
+            error!("Failed to shutdown tracer provider: {}", e);
+        }
+    };
+    
+    // Run the server with graceful shutdown
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal)
+        .await
+        .unwrap();
 }
