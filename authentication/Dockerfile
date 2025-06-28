@@ -47,11 +47,11 @@ RUN chown -R appuser:appuser /app
 USER appuser
 
 # Expose port
-EXPOSE 8080
+EXPOSE 8082
 
 # Set environment variables
 ENV RUST_LOG=info
-ENV PORT=8080
+ENV PORT=8082
 
 # Set OpenTelemetry environment variables
 ENV OTEL_SERVICE_NAME=authentication-api
