@@ -24,7 +24,49 @@ use opentelemetry_otlp::{SpanExporter, WithExportConfig, Protocol};
 use opentelemetry_sdk::trace::SdkTracerProvider;
 use opentelemetry_sdk::Resource;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Layer};
+use axum::response::{IntoResponse, Response};
+use axum::Json as AxumJson;
+use thiserror::Error;
 
+#[derive(Debug, Error)]
+pub enum AppError {
+    #[error("Database error: {0}")]
+    Database(#[from] sqlx::Error),
+    #[error("Key loading error: {0}")]
+    KeyLoading(String),
+    #[error("JWT error: {0}")]
+    Jwt(#[from] jsonwebtoken::errors::Error),
+    #[error("Password verification error: {0}")]
+    PasswordVerification(String),
+    #[error("Password hashing error: {0}")]
+    PasswordHashing(String),
+    #[error("Username or email already exists")]
+    Conflict,
+    #[error("Invalid credentials")]
+    Unauthorized,
+    #[error("Other error: {0}")]
+    Other(String),
+    #[error("Bcrypt error: {0}")]
+    Bcrypt(#[from] bcrypt::BcryptError),
+}
+
+impl IntoResponse for AppError {
+    fn into_response(self) -> Response {
+        let (status, message) = match &self {
+            AppError::Database(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            AppError::KeyLoading(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            AppError::Jwt(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            AppError::PasswordVerification(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            AppError::PasswordHashing(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            AppError::Conflict => (StatusCode::CONFLICT, self.to_string()),
+            AppError::Unauthorized => (StatusCode::UNAUTHORIZED, self.to_string()),
+            AppError::Other(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+            AppError::Bcrypt(_) => (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()),
+        };
+        let body = serde_json::json!({ "error": message });
+        (status, AxumJson(body)).into_response()
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
@@ -96,12 +138,9 @@ fn load_private_key() -> Result<EncodingKey, Box<dyn std::error::Error>> {
     let private_key_path = env::var("RSA_PRIVATE_KEY_PATH")
         .unwrap_or_else(|_| "keys/private_key.pem".to_string());
     info!("Loading private key from: {}", private_key_path);
-    
-    let private_key_pem = fs::read_to_string(&private_key_path)
-        .map_err(|e| format!("Failed to read private key from {}: {}", private_key_path, e))?;
-    
+        .map_err(|e| AppError::KeyLoading(format!("Failed to read private key from {}: {}", private_key_path, e)))?;
     EncodingKey::from_rsa_pem(private_key_pem.as_bytes())
-        .map_err(|e| format!("Failed to parse RSA private key: {}", e).into())
+        .map_err(|e| AppError::KeyLoading(format!("Failed to parse RSA private key: {}", e)))
 }
 
 // Helper function to load RSA public key for JWKS
@@ -109,21 +148,18 @@ fn load_public_key_for_jwks() -> Result<RsaPublicKey, Box<dyn std::error::Error>
     let public_key_path = env::var("RSA_PUBLIC_KEY_PATH")
         .unwrap_or_else(|_| "keys/public_key.pem".to_string());
     info!("Loading public key from: {}", public_key_path);
-    
-    let public_key_pem = fs::read_to_string(&public_key_path)
-        .map_err(|e| format!("Failed to read public key from {}: {}", public_key_path, e))?;
-    
+        .map_err(|e| AppError::KeyLoading(format!("Failed to read public key from {}: {}", public_key_path, e)))?;
     // Try PKCS#8 format first (default OpenSSL output), then PKCS#1 as fallback
     RsaPublicKey::from_public_key_pem(&public_key_pem)
         .or_else(|_| RsaPublicKey::from_pkcs1_pem(&public_key_pem))
-        .map_err(|e| format!("Failed to parse RSA public key: {}", e).into())
+        .map_err(|e| AppError::KeyLoading(format!("Failed to parse RSA public key: {}", e)))
 }
 
 // Login endpoint that generates JWT token
 async fn login(
     State(pool): State<PgPool>,
     Json(payload): Json<LoginRequest>,
-) -> Result<Json<TokenResponse>, (StatusCode, String)> {
+) -> Result<Json<TokenResponse>, AppError> {
     info!("Login attempt for user: {}", payload.username);
 
     // Query the database for the user
@@ -140,12 +176,7 @@ async fn login(
                 role: row.get("role"),
             }
         })
-        .fetch_optional(&pool)
-        .await
-        .map_err(|e| {
-            error!("Database error: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
-        })?;
+        .await?;
 
     // Check if user exists and verify password
     let user = match user {
@@ -163,27 +194,19 @@ async fn login(
                 verify(&password, &stored_hash)
             })
             .await
-            .map_err(|e| {
-                error!("Task join error: {}", e);
-                (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())
-            })?
-            .map_err(|e| {
-                error!("Password verification error: {:?}", e);
-                error!("Hash format: {}", &user.password_hash[..4]);
-                (StatusCode::INTERNAL_SERVER_ERROR, format!("Password verification error: {:?}", e))
-            })?;
+            .map_err(|e| AppError::PasswordVerification(format!("Task join error: {}", e)))??;
 
             if password_matches {
                 info!("Password verified successfully");
                 user
             } else {
                 info!("Password verification failed - hash mismatch");
-                return Err((StatusCode::UNAUTHORIZED, "Invalid credentials".to_string()));
+                return Err(AppError::Unauthorized);
             }
         }
         None => {
             info!("User not found: {}", payload.username);
-            return Err((StatusCode::UNAUTHORIZED, "Invalid credentials".to_string()))
+            return Err(AppError::Unauthorized)
         },
     };
 
@@ -209,6 +232,7 @@ async fn login(
             error!("Failed to load private key: {}", e);
             (StatusCode::INTERNAL_SERVER_ERROR, "Key loading error".to_string())
         })?;
+        .map_err(|e| AppError::KeyLoading(e.to_string()))?;
 
     let mut header = Header::new(Algorithm::RS256);
     header.kid = Some(env::var("PRODUCT_KEY_ID").unwrap_or_else(|_| "product-service-key-1".to_string()));
@@ -240,24 +264,16 @@ async fn auth_status() -> Json<serde_json::Value> {
 async fn register(
     State(pool): State<PgPool>,
     Json(payload): Json<RegisterRequest>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+) -> Result<Json<serde_json::Value>, AppError> {
     info!("Register endpoint called");
     // Check if username or email already exists
     let existing_user = sqlx::query("SELECT username, email FROM users WHERE username = $1 OR email = $2")
         .bind(&payload.username)
         .bind(&payload.email)
-        .fetch_optional(&pool)
-        .await
-        .map_err(|e| {
-            error!("Database error checking existing user/email: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Database error".to_string())
-        })?;
+        .await?;
 
     if existing_user.is_some() {
-        return Err((
-            StatusCode::CONFLICT,
-            "Username already exists".to_string(),
-        ));
+        return Err(AppError::Conflict);
     }
 
     // Offload password hashing to blocking thread pool
@@ -267,14 +283,7 @@ async fn register(
             .map(|hash_result| hash_result.format_for_version(Version::TwoA))
     })
     .await
-    .map_err(|e| {
-        error!("Task join error: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".to_string())
-    })?
-    .map_err(|e| {
-        error!("Password hashing error: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Password hashing failed".to_string())
-    })?;
+    .map_err(|e| AppError::PasswordHashing(format!("Task join error: {}", e)))??;
 
     // Insert the new user
     let result = sqlx::query(
@@ -284,12 +293,7 @@ async fn register(
     .bind(&payload.email)
     .bind(&password_hash)
     .bind("user") // Default role for new registrations
-    .fetch_one(&pool)
-    .await
-    .map_err(|e| {
-        error!("Database error creating user: {}", e);
-        (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create user".to_string())
-    })?;
+    .await?;
 
     let user_id: i32 = result.get("id");
 
@@ -301,7 +305,8 @@ async fn register(
 }
 
 // JWKS endpoint for public key distribution
-async fn jwks() -> Result<Json<JwksResponse>, (StatusCode, String)> {
+async fn jwks(
+) -> Result<Json<JwksResponse>, AppError> {
     info!("JWKS endpoint called");
     use base64::{Engine as _, engine::general_purpose};
     use rsa::traits::PublicKeyParts;
