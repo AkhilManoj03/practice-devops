@@ -1,0 +1,59 @@
+services:
+  authentication:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgres://devops:catalogue@products-db:5432/products-db
+      - RUST_LOG=info
+      - PORT=8080
+    env_file:
+      - .env
+    depends_on:
+      - products-db
+    networks:
+      - app-network
+
+  products-db:
+    build:
+      context: ../database
+      dockerfile: Dockerfile
+    environment:
+      - POSTGRES_USER=devops
+      - POSTGRES_PASSWORD=catalogue
+      - POSTGRES_DB=products-db
+    ports:
+      - "5432:5432"
+    networks:
+      - app-network
+  
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - authentication
+    networks:
+      - app-network
+
+  products:
+    build:
+      context: ../product
+      dockerfile: Dockerfile
+    depends_on:
+      - authentication
+      - products-db
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
