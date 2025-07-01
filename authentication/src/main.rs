@@ -12,7 +12,7 @@ use jsonwebtoken::{encode, EncodingKey, Header, Algorithm};
 use serde::{Deserialize, Serialize};
 use sqlx::postgres::{PgPool, PgRow};
 use sqlx::Row;
-use std::{env, fs};
+use std::fs;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing::{error, info};
@@ -133,21 +133,66 @@ struct OpenIdConfiguration {
     id_token_signing_alg_values_supported: Vec<String>,
 }
 
+#[derive(Clone)]
+pub struct AppState {
+    pub pool: PgPool,
+    pub config: Config,
+}
+
+#[derive(Debug, Clone)]
+pub struct Config {
+    pub rsa_private_key_path: String,
+    pub rsa_public_key_path: String,
+    pub product_key_id: String,
+    pub base_url: String,
+    pub postgres_user: String,
+    pub postgres_password: String,
+    pub postgres_host: String,
+    pub postgres_port: String,
+    pub postgres_db: String,
+    pub otel_service_name: String,
+    pub app_version: String,
+    pub deployment_environment: String,
+    pub otel_exporter_otlp_endpoint: String,
+    pub port: String,
+}
+
+impl Config {
+    pub fn from_env() -> Self {
+        Self {
+            rsa_private_key_path: std::env::var("RSA_PRIVATE_KEY_PATH").unwrap_or_else(|_| "keys/private_key.pem".to_string()),
+            rsa_public_key_path: std::env::var("RSA_PUBLIC_KEY_PATH").unwrap_or_else(|_| "keys/public_key.pem".to_string()),
+            product_key_id: std::env::var("PRODUCT_KEY_ID").unwrap_or_else(|_| "product-service-key-1".to_string()),
+            base_url: std::env::var("BASE_URL").unwrap_or_else(|_| "http://authentication:8082".to_string()),
+            postgres_user: std::env::var("POSTGRES_USER").unwrap_or_else(|_| "devops".to_string()),
+            postgres_password: std::env::var("POSTGRES_PASSWORD").unwrap_or_else(|_| "catalogue".to_string()),
+            postgres_host: std::env::var("POSTGRES_HOST").unwrap_or_else(|_| "products-db".to_string()),
+            postgres_port: std::env::var("POSTGRES_PORT").unwrap_or_else(|_| "5432".to_string()),
+            postgres_db: std::env::var("POSTGRES_DB").unwrap_or_else(|_| "products-db".to_string()),
+            otel_service_name: std::env::var("OTEL_SERVICE_NAME").unwrap_or_else(|_| "craftista-authentication".to_string()),
+            app_version: std::env::var("APP_VERSION").unwrap_or_else(|_| "1.0.0".to_string()),
+            deployment_environment: std::env::var("DEPLOYMENT_ENVIRONMENT").unwrap_or_else(|_| "production".to_string()),
+            otel_exporter_otlp_endpoint: std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT").unwrap_or_else(|_| "http://otel-collector:4318".to_string()),
+            port: std::env::var("PORT").unwrap_or_else(|_| "8082".to_string()),
+        }
+    }
+}
+
 // Helper function to load RSA private key
-fn load_private_key() -> Result<EncodingKey, Box<dyn std::error::Error>> {
-    let private_key_path = env::var("RSA_PRIVATE_KEY_PATH")
-        .unwrap_or_else(|_| "keys/private_key.pem".to_string());
+fn load_private_key(config: &Config) -> Result<EncodingKey, AppError> {
+    let private_key_path = &config.rsa_private_key_path;
     info!("Loading private key from: {}", private_key_path);
+    let private_key_pem = fs::read_to_string(private_key_path)
         .map_err(|e| AppError::KeyLoading(format!("Failed to read private key from {}: {}", private_key_path, e)))?;
     EncodingKey::from_rsa_pem(private_key_pem.as_bytes())
         .map_err(|e| AppError::KeyLoading(format!("Failed to parse RSA private key: {}", e)))
 }
 
 // Helper function to load RSA public key for JWKS
-fn load_public_key_for_jwks() -> Result<RsaPublicKey, Box<dyn std::error::Error>> {
-    let public_key_path = env::var("RSA_PUBLIC_KEY_PATH")
-        .unwrap_or_else(|_| "keys/public_key.pem".to_string());
+fn load_public_key_for_jwks(config: &Config) -> Result<RsaPublicKey, AppError> {
+    let public_key_path = &config.rsa_public_key_path;
     info!("Loading public key from: {}", public_key_path);
+    let public_key_pem = fs::read_to_string(public_key_path)
         .map_err(|e| AppError::KeyLoading(format!("Failed to read public key from {}: {}", public_key_path, e)))?;
     // Try PKCS#8 format first (default OpenSSL output), then PKCS#1 as fallback
     RsaPublicKey::from_public_key_pem(&public_key_pem)
@@ -157,9 +202,11 @@ fn load_public_key_for_jwks() -> Result<RsaPublicKey, Box<dyn std::error::Error>
 
 // Login endpoint that generates JWT token
 async fn login(
-    State(pool): State<PgPool>,
+    State(state): State<AppState>,
     Json(payload): Json<LoginRequest>,
 ) -> Result<Json<TokenResponse>, AppError> {
+    let pool = &state.pool;
+    let config = &state.config;
     info!("Login attempt for user: {}", payload.username);
 
     // Query the database for the user
@@ -176,6 +223,7 @@ async fn login(
                 role: row.get("role"),
             }
         })
+        .fetch_optional(pool)
         .await?;
 
     // Check if user exists and verify password
@@ -227,22 +275,13 @@ async fn login(
     };
 
     // Load RSA private key and create token with RS256
-    let encoding_key = load_private_key()
-        .map_err(|e| {
-            error!("Failed to load private key: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Key loading error".to_string())
-        })?;
-        .map_err(|e| AppError::KeyLoading(e.to_string()))?;
+    let encoding_key = load_private_key(config)?;
 
     let mut header = Header::new(Algorithm::RS256);
-    header.kid = Some(env::var("PRODUCT_KEY_ID").unwrap_or_else(|_| "product-service-key-1".to_string()));
+    header.kid = Some(config.product_key_id.clone());
 
     // Create the token using RSA private key
-    let token = encode(&header, &claims, &encoding_key)
-        .map_err(|e| {
-            error!("Failed to create token: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to create token".to_string())
-        })?;
+    let token = encode(&header, &claims, &encoding_key)?;
 
     // Return the token
     Ok(Json(TokenResponse {
@@ -262,14 +301,17 @@ async fn auth_status() -> Json<serde_json::Value> {
 }
 
 async fn register(
-    State(pool): State<PgPool>,
+    State(state): State<AppState>,
     Json(payload): Json<RegisterRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    let pool = &state.pool;
+    let _config = &state.config;
     info!("Register endpoint called");
     // Check if username or email already exists
     let existing_user = sqlx::query("SELECT username, email FROM users WHERE username = $1 OR email = $2")
         .bind(&payload.username)
         .bind(&payload.email)
+        .fetch_optional(pool)
         .await?;
 
     if existing_user.is_some() {
@@ -293,6 +335,7 @@ async fn register(
     .bind(&payload.email)
     .bind(&password_hash)
     .bind("user") // Default role for new registrations
+    .fetch_one(pool)
     .await?;
 
     let user_id: i32 = result.get("id");
@@ -306,21 +349,18 @@ async fn register(
 
 // JWKS endpoint for public key distribution
 async fn jwks(
+    State(state): State<AppState>,
 ) -> Result<Json<JwksResponse>, AppError> {
+    let config = &state.config;
     info!("JWKS endpoint called");
     use base64::{Engine as _, engine::general_purpose};
     use rsa::traits::PublicKeyParts;
     
-    // Get key ID from environment
-    let key_id = env::var("PRODUCT_KEY_ID")
-        .unwrap_or_else(|_| "product-service-key-1".to_string());
+    // Get key ID from config
+    let key_id = config.product_key_id.clone();
     
     // Load RSA public key
-    let public_key = load_public_key_for_jwks()
-        .map_err(|e| {
-            error!("Failed to load public key for JWKS: {}", e);
-            (StatusCode::INTERNAL_SERVER_ERROR, "Failed to load public key".to_string())
-        })?;
+    let public_key = load_public_key_for_jwks(config)?;
     
     // Extract modulus and exponent
     let modulus = public_key.n();
@@ -346,9 +386,12 @@ async fn jwks(
 }
 
 // OpenID Connect Discovery endpoint
-async fn openid_configuration() -> Json<OpenIdConfiguration> {
+async fn openid_configuration(
+    State(state): State<AppState>,
+) -> Json<OpenIdConfiguration> {
+    let config = &state.config;
     info!("OpenID configuration endpoint called");
-    let base_url = env::var("BASE_URL").unwrap_or_else(|_| "http://authentication:8082".to_string());
+    let base_url = config.base_url.clone();
     
     Json(OpenIdConfiguration {
         issuer: base_url.clone(),
@@ -363,41 +406,29 @@ async fn openid_configuration() -> Json<OpenIdConfiguration> {
 }
 
 // Create resource with service information
-fn get_resource() -> Resource {
-    let service_name = env::var("OTEL_SERVICE_NAME")
-        .unwrap_or_else(|_| "craftista-authentication".to_string());
-    let service_version = env::var("APP_VERSION")
-        .unwrap_or_else(|_| "1.0.0".to_string());
-    let environment = env::var("DEPLOYMENT_ENVIRONMENT")
-        .unwrap_or_else(|_| "production".to_string());
-
+fn get_resource(config: &Config) -> Resource {
     Resource::builder()
-        .with_service_name(service_name)
+        .with_service_name(config.otel_service_name.clone())
         .with_attributes(vec![
-            KeyValue::new("service.version", service_version),
-            KeyValue::new("deployment.environment", environment),
+            KeyValue::new("service.version", config.app_version.clone()),
+            KeyValue::new("deployment.environment", config.deployment_environment.clone()),
         ])
         .build()
 }
 
 // Initialize OpenTelemetry tracer  
-fn init_tracer() -> SdkTracerProvider {
-    let otlp_endpoint = env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
-        .unwrap_or_else(|_| "http://otel-collector:4318".to_string());
-    
-    info!("Initializing OpenTelemetry tracer with endpoint: {}", otlp_endpoint);
-
+fn init_tracer(config: &Config) -> SdkTracerProvider {
+    info!("Initializing OpenTelemetry tracer with endpoint: {}", config.otel_exporter_otlp_endpoint);
     // Configure OTLP exporter using HTTP
     let exporter = SpanExporter::builder()
         .with_http()
-        .with_endpoint(otlp_endpoint)
+        .with_endpoint(config.otel_exporter_otlp_endpoint.clone())
         .with_protocol(Protocol::HttpBinary)
         .build()
         .expect("Failed to build exporter");
-    
     // Create tracer provider
     SdkTracerProvider::builder()
-        .with_resource(get_resource())
+        .with_resource(get_resource(config))
         .with_batch_exporter(exporter)
         .build()
 }
@@ -407,8 +438,11 @@ async fn main() {
     // Load environment variables
     dotenv().ok();
 
+    // Load config
+    let config = Config::from_env();
+
     // Initialize tracing
-    let tracer_provider = init_tracer();
+    let tracer_provider = init_tracer(&config);
     global::set_tracer_provider(tracer_provider.clone());
     let tracer = tracer_provider.tracer("craftista-authentication");
     let otel_layer = tracing_opentelemetry::layer().with_tracer(tracer);
@@ -427,16 +461,10 @@ async fn main() {
         .with(fmt_layer)
         .init();
 
-    // Set up database connection from individual environment variables
-    let postgres_user = env::var("POSTGRES_USER").unwrap_or_else(|_| "devops".to_string());
-    let postgres_password = env::var("POSTGRES_PASSWORD").unwrap_or_else(|_| "catalogue".to_string());
-    let postgres_host = env::var("POSTGRES_HOST").unwrap_or_else(|_| "products-db".to_string());
-    let postgres_port = env::var("POSTGRES_PORT").unwrap_or_else(|_| "5432".to_string());
-    let postgres_db = env::var("POSTGRES_DB").unwrap_or_else(|_| "products-db".to_string());
-    
+    // Set up database connection from config
     let database_url = format!(
         "postgres://{}:{}@{}:{}/{}",
-        postgres_user, postgres_password, postgres_host, postgres_port, postgres_db
+        config.postgres_user, config.postgres_password, config.postgres_host, config.postgres_port, config.postgres_db
     );
 
     let pool = PgPool::connect(&database_url)
@@ -444,6 +472,11 @@ async fn main() {
         .expect("Failed to connect to Postgres");
 
     // Build our application with routes
+    let app_state = AppState {
+        pool,
+        config: config.clone(),
+    };
+
     let app = Router::new()
         .route("/api/auth/login", post(login))
         .route("/api/auth/register", post(register))
@@ -452,11 +485,9 @@ async fn main() {
         .route("/.well-known/openid-configuration", get(openid_configuration))
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
-        .with_state(pool);
+        .with_state(app_state);
 
-    let port = env::var("PORT").unwrap_or_else(|_| "8080".to_string());
-    let addr = format!("0.0.0.0:{}", port);
-    
+    let addr = format!("0.0.0.0:{}", config.port);
     info!("Authentication service starting on {}", addr);
     
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
