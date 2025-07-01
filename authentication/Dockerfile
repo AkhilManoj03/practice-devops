@@ -72,7 +72,7 @@ ENV PORT=8080
 
 # Set OpenTelemetry environment variables
 ENV OTEL_SERVICE_NAME=authentication-api
-ENV OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+ENV OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/traces
 ENV OTEL_TRACES_SAMPLER=always_on
 ENV APP_VERSION=1.0.0
 ENV DEPLOYMENT_ENVIRONMENT=production
