@@ -129,6 +129,27 @@ and testing
 
 **Related PR**: [auth: implement authentication microservice #9](https://github.com/AkhilManoj03/practice-devops/pull/9)
 
+### 10. Docker Infrastructure Optimization
+- **Multi-stage Build Implementation**: Refactored all Dockerfiles to use multi-stage builds for improved efficiency
+- **Base Image Optimization**: Migrated services to Alpine Linux for smaller runtime footprints
+- **Build Context Optimization**: Added .dockerignore files to exclude unnecessary files from Docker context
+- **Dependency Caching**: Implemented cargo-chef for Rust services to prevent redundant dependency rebuilds
+- **Version Control**: Introduced build arguments for consistent version management across all Dockerfiles
+- **Image Size Reductions**:
+  - Authentication service: 71% reduction (121MB → 40MB)
+  - Product service: 85% reduction (793MB → 120MB)
+  - Recommendation service: 97% reduction (782MB → 26MB)
+  - Frontend service: Applied best practices with multi-stage builds
+- **Benefits**:
+  - Faster build times through efficient dependency caching
+  - Reduced network overhead during image transfers
+  - Lower storage requirements and memory usage
+  - Enhanced security through minimal base images
+  - Improved deployment speed and scalability
+  - Consistent Alpine-based runtime environments
+
+**Related PR**: [Docker: Optimize docker infrastructure #12](https://github.com/AkhilManoj03/practice-devops/pull/12)
+
 ## Learning Outcomes
 This project has provided valuable hands-on experience in:
 - Modern containerization techniques
