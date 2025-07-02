@@ -1,5 +1,10 @@
+# Build arguments for version control
+ARG RUST_VERSION=1.87.0
+ARG ALPINE_VERSION=3.22
+ARG CARGO_CHEF_VERSION=0.1.71
+
 # Chef stage
-FROM lukemathwalker/cargo-chef:0.1.71-rust-1.87.0-alpine3.22 AS chef
+FROM lukemathwalker/cargo-chef:${CARGO_CHEF_VERSION}-rust-${RUST_VERSION}-alpine${ALPINE_VERSION} AS chef
 WORKDIR /app
 
 
@@ -33,7 +38,7 @@ RUN cargo build --release --bin authentication-service
 
 
 # Runtime stage
-FROM alpine:3.22.0
+FROM alpine:${ALPINE_VERSION}
 
 # Install runtime dependencies
 RUN apk add --no-cache ca-certificates libgcc

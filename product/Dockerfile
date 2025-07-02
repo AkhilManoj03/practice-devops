@@ -1,5 +1,9 @@
+# Build arguments for version control
+ARG PYTHON_VERSION=3.13
+ARG ALPINE_VERSION=3.22
+
 # Build stage
-FROM python:3.13-alpine AS builder
+FROM python:${PYTHON_VERSION}-alpine${ALPINE_VERSION} AS builder
 
 # Install build dependencies
 RUN apk add --no-cache \
@@ -20,7 +24,7 @@ RUN pip install --upgrade pip && \
 
 
 # Runtime stage
-FROM python:3.13-alpine
+FROM python:${PYTHON_VERSION}-alpine${ALPINE_VERSION}
 
 # Install runtime dependencies
 RUN apk add --no-cache \

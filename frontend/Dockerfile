@@ -1,5 +1,13 @@
+# Build arguments for version control
+ARG NODE_VERSION=22.16
+ARG ALPINE_VERSION=3.22
+ARG NPM_VERSION=11.4.2
+
 # Build stage
-FROM node:22-alpine AS builder
+FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION} AS builder
+
+# Install specific npm version
+RUN npm install -g npm@${NPM_VERSION}
 
 WORKDIR /build
 
@@ -18,7 +26,7 @@ RUN npm prune --production && \
     npm cache clean --force
 
 # Runtime stage
-FROM node:22-alpine
+FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION}
 
 # Create non-root user
 RUN addgroup -S -g 1001 appuser && \
