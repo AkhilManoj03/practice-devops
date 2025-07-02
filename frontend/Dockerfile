@@ -1,32 +1,50 @@
-FROM --platform=linux/amd64 node:22-alpine
+# Build arguments for version control
+ARG NODE_VERSION=22.16
+ARG ALPINE_VERSION=3.22
+ARG NPM_VERSION=11.4.2
 
-# Set the working directory inside the container
-WORKDIR /app
+# Build stage
+FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION} AS builder
+
+# Install specific npm version
+RUN npm install -g npm@${NPM_VERSION}
+
+WORKDIR /build
+
+# Copy package files
+COPY package*.json ./
+
+# Install build dependencies
+RUN npm install --no-audit --no-fund && \
+    npm cache clean --force
+
+# Copy source code
+COPY . .
+
+# Remove dev dependencies and clean up
+RUN npm prune --production && \
+    npm cache clean --force
+
+# Runtime stage
+FROM node:${NODE_VERSION}-alpine${ALPINE_VERSION}
 
 # Create non-root user
 RUN addgroup -S -g 1001 appuser && \
-    adduser -S -G appuser -u 1001 -h /home/appuser appuser
-
-# Install system dependencies and set up npm directory
-RUN apk add --no-cache && \
-    mkdir -p /home/appuser/.npm-global && \
-    chown -R appuser:appuser /home/appuser /app && \
+    adduser -S -G appuser -u 1001 -h /home/appuser appuser && \
     rm -rf /var/cache/apk/*
+
+WORKDIR /app
 
 # Switch to non-root user
 USER appuser
 
-# Copy package files for dependency installation
-COPY --chown=appuser:appuser package*.json ./
+# Copy production dependencies from builder
+COPY --from=builder --chown=appuser:appuser /build/node_modules ./node_modules
 
-# Install Node.js dependencies
-RUN npm install --no-audit --no-fund --prefer-offline && \
-    npm cache clean --force
-
-# Copy application files
+# Copy application files (unnecessary files excluded by .dockerignore)
 COPY --chown=appuser:appuser . .
 
-# Set OpenTelemetry environment variables with defaults
+# Set environment variables
 ENV NODE_ENV=production
 ENV OTEL_SERVICE_NAME=craftista-frontend
 ENV OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318/v1/traces
