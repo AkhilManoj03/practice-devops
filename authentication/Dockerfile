@@ -1,26 +1,46 @@
-# Build stage
-FROM rust:1.87.0-slim-bookworm AS builder
-
-# Set the working directory
+# Chef stage
+FROM lukemathwalker/cargo-chef:0.1.71-rust-1.87.0-alpine3.22 AS chef
 WORKDIR /app
 
-# Copy the entire project
-COPY . .
 
-# Build for release
-RUN cargo build --release
+# Planner stage
+FROM chef AS planner
+
+# Copy only the files needed for planning
+COPY Cargo.toml Cargo.lock ./
+COPY src/ ./src/
+
+# Generate the recipe file
+RUN cargo chef prepare --recipe-path recipe.json
+
+
+# Builder stage
+FROM chef AS builder
+
+# Copy the recipe file from the planner stage
+COPY --from=planner /app/recipe.json ./recipe.json
+
+# Cook the dependencies for release
+RUN cargo chef cook --recipe-path recipe.json --release
+
+# Copy the rest of the source code
+COPY Cargo.toml Cargo.lock ./
+COPY src/ ./src/
+
+# Build for release with static linking for Alpine
+ENV RUSTFLAGS="-C target-feature=-crt-static"
+RUN cargo build --release --bin authentication-service
+
 
 # Runtime stage
-FROM debian:bookworm-slim
+FROM alpine:3.22.0
 
 # Install runtime dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates && \
-    rm -rf /var/lib/apt/lists/*
+RUN apk add --no-cache ca-certificates libgcc
 
 # Create a non-root user
-RUN groupadd -g 1001 appuser && \
-    useradd -u 1001 -g appuser appuser
+RUN addgroup -g 1001 appuser && \
+    adduser -u 1001 -G appuser -s /bin/sh -D appuser
 
 # Set the working directory
 WORKDIR /app
@@ -29,7 +49,7 @@ WORKDIR /app
 COPY --from=builder /app/target/release/authentication-service /app/authentication-service
 
 # Copy RSA keys
-COPY --from=builder /app/keys /app/keys
+COPY keys/ /app/keys/
 
 # Make sure the binary is executable
 RUN chmod +x /app/authentication-service
