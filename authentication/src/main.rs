@@ -1,11 +1,13 @@
 mod config;
 mod errors;
 mod handlers;
+mod middleware;
 mod models;
 mod state;
 mod telemetry;
 
 use axum::{
+    middleware as axum_middleware,
     routing::{get, post},
     Router,
 };
@@ -40,13 +42,17 @@ async fn main() {
         config: config.clone(),
     };
 
+    let protected_routes = Router::new()
+        .route("/register", post(handlers::register::register))
+        .layer(axum_middleware::from_fn_with_state(app_state.clone(), middleware::auth));
+
     // Build our application with routes
     let app = Router::new()
         .route("/api/auth/login", post(handlers::login::login))
-        .route("/api/auth/register", post(handlers::register::register))
         .route("/api/auth/status", get(handlers::status::auth_status))
         .route("/.well-known/jwks.json", get(handlers::openid::jwks))
         .route("/.well-known/openid-configuration", get(handlers::openid::openid_configuration))
+        .nest("/api/auth", protected_routes)
         .layer(CorsLayer::permissive())
         .layer(TraceLayer::new_for_http())
         .with_state(app_state);

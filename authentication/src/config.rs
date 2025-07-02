@@ -14,6 +14,7 @@ pub struct Config {
     pub deployment_environment: String,
     pub otel_exporter_otlp_endpoint: String,
     pub port: String,
+    pub internal_api_key: String,
 }
 
 impl Config {
@@ -47,6 +48,8 @@ impl Config {
                 .unwrap_or_else(|_| "http://otel-collector:4318/v1/traces".to_string()),
             port: std::env::var("PORT")
                 .unwrap_or_else(|_| "8082".to_string()),
+            internal_api_key: std::env::var("INTERNAL_API_KEY")
+                .unwrap_or_else(|_| "a-super-secret-key".to_string()),
         }
     }
 }
