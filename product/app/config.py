@@ -30,7 +30,6 @@ class Settings(BaseSettings):
 
     # File paths
     base_dir: Path = Path(__file__).resolve().parent
-    products_file: str = "data/products.json"
     templates_dir: str = "templates"
     static_dir: str = "static"
 
@@ -60,14 +59,6 @@ class Settings(BaseSettings):
                 logging.debug(f"{field_name}: ***")
             else:
                 logging.debug(f"{field_name}: {value}")
-
-    def get_products_file_path(self) -> Path:
-        """Get the full path to the products JSON file.
-
-        Returns:
-            Path: Full path to products.json
-        """
-        return self.base_dir / self.products_file
 
     def get_templates_dir(self) -> str:
         """Get the full path to the templates directory.

@@ -6,12 +6,10 @@ architecture while maintaining all existing endpoints.
 
 ## Features
 
-- **Unified Data Model**: Products include vote counts as a native attribute in the same JSON file
 - **All Original Endpoints**: Maintains compatibility with both catalogue and voting service APIs
 - **Simplified Architecture**: No inter-service HTTP calls needed
 - **Better Performance**: Direct data access without network overhead
 - **Easier Deployment**: Single service to deploy and manage
-- **Single Data Source**: All product and voting data in one JSON file
 
 ## API Endpoints
 
@@ -29,22 +27,6 @@ architecture while maintaining all existing endpoints.
 - `GET /health` - Health check
 - `GET /api/system-info` - System information
 - `GET /` - Home page
-
-## Data Structure
-
-Products include votes as a native field in the products.json file:
-
-```json
-[
-  {
-    "id": "1",
-    "name": "Origami Crane",
-    "description": "Beautiful origami crane...",
-    "image_url": "/static/images/origami/001-origami.png",
-    "votes": 5
-  }
-]
-```
 
 ## Running the Service
 
@@ -79,8 +61,6 @@ docker compose up --build
 
 The service can be configured via environment variables:
 
-- `DATA_SOURCE`: "json" or "database" (default: "json")
-- `PRODUCTS_FILE`: Path to products JSON file (default: "app/products.json")
 - `LOG_LEVEL`: Logging level (default: "INFO")
 - `HOST`: Server host (default: "0.0.0.0")
 - `PORT`: Server port (default: 8000)
