@@ -43,8 +43,6 @@ class PostgresManager:
                 port=self.settings.postgres_port
             )
             logging.info(f"Database connection established to {self.settings.postgres_host}:{self.settings.postgres_port}")
-
-            self._initialize_schema()
         except psycopg2.Error as e:
             logging.error(f"Failed to connect to database: {e}")
             raise DataPersistenceError("Failed to connect to database")
@@ -52,88 +50,7 @@ class PostgresManager:
             logging.error(f"Unexpected error in connect(): {e}")
             raise Exception("Unexpected error connecting to database")
 
-    def _initialize_schema(self) -> None:
-        """Initialize database schema for products with votes.
-        
-        Creates the products table and necessary indexes if they don't exist.
-        If the table is newly created, populates it with initial data from products.json.
-        
-        Raises:
-            DataPersistenceError: If schema initialization fails.
-        """
-        if not self.connection:
-            return
-
-        try:
-            with self.connection.cursor() as cursor:
-                # Create products table if it doesn't exist
-                cursor.execute("""
-                    CREATE TABLE IF NOT EXISTS products (
-                        id SERIAL PRIMARY KEY,
-                        name VARCHAR(255) NOT NULL,
-                        description TEXT,
-                        image_url VARCHAR(500),
-                        votes INTEGER DEFAULT 0
-                    )
-                """)
-
-                # Check if table is empty
-                cursor.execute("SELECT COUNT(*) FROM products")
-                count = cursor.fetchone()[0]
-
-                # Create index on id for faster lookups
-                cursor.execute("""
-                    CREATE INDEX IF NOT EXISTS idx_products_id ON products(id)
-                """)
-
-                self.connection.commit()
-                logging.info("Database schema initialized successfully")
-        except psycopg2.Error as e:
-            logging.error(f"Failed to initialize database schema: {e}")
-            raise DataPersistenceError("Failed to initialize database schema")
-        
-        if count != 0:
-            logging.debug(f"Products table already contains {count} records, skipping initial data load")
-            return
-
-        # Load initial data from JSON file
-        products_file = self.settings.get_products_file_path()
-        try:
-            with open(products_file, 'r', encoding='utf-8') as f:
-                products = json.load(f)
-
-            if not isinstance(products, list):
-                raise ValueError("Products file must contain a list")
-
-            # Ensure all products have a votes field
-            for product in products:
-                if 'votes' not in product:
-                    product['votes'] = 0
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            logging.error(f"Failed to load initial products from {products_file}: {e}")
-            raise DataPersistenceError("Failed to load initial products from json file")
-
-        # Insert initial products into database
-        try:
-            with self.connection.cursor() as cursor:
-                for product in products:
-                    cursor.execute("""
-                        INSERT INTO products (id, name, description, image_url, votes)
-                        VALUES (%s, %s, %s, %s, %s)
-                    """, (
-                        product['id'],
-                        product['name'],
-                        product['description'],
-                        product['image_url'],
-                        product.get('votes', 0)
-                    ))
-                self.connection.commit()
-                logging.info(f"Inserted {len(products)} initial products into database")
-                logging.info("Database schema initialized successfully")
-        except psycopg2.Error as e:
-            logging.error(f"Failed to insert initial products: {e}")
-            raise DataPersistenceError("Failed to insert initial products into database")
-
+    
     def disconnect(self) -> None:
         """Close database connection.
 
