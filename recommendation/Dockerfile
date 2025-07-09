@@ -47,7 +47,6 @@ WORKDIR /app
 COPY --from=builder --chown=appuser:appuser /build/app ./app
 
 # Copy necessary runtime files
-COPY --chown=appuser:appuser config.json ./
 COPY --chown=appuser:appuser static/ ./static/
 COPY --chown=appuser:appuser templates/ ./templates/
 COPY --chown=appuser:appuser data/ ./data/

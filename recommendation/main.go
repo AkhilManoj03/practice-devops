@@ -15,25 +15,6 @@ import (
 	"recommendation/telemetry"
 )
 
-// Config represents the structure of our configuration file.
-type Config struct {
-    Version string `json:"version"`
-}
-
-// loadConfig reads the configuration file and returns a Config struct.
-func loadConfig() (Config, error) {
-    file, err := os.Open("config.json")
-    if err != nil {
-        return Config{}, err
-    }
-    defer file.Close()
-
-    config := Config{}
-    decoder := json.NewDecoder(file)
-    err = decoder.Decode(&config)
-    return config, err
-}
-
 type SystemInfo struct {
 	Hostname      string
 	IPAddress     string
@@ -85,17 +66,11 @@ func getRecommendationStatus(c *gin.Context) {
 }
 
 func renderHomePage(c *gin.Context) {
-	config, err := loadConfig()
-	if err != nil {
-		c.String(http.StatusInternalServerError, "Internal Server Error")
-		return
-	}
-    
 	systemInfo := GetSystemInfo()
 
 	c.HTML(http.StatusOK, "index.html", gin.H{
 		"Year":        time.Now().Year(),
-		"Version":     config.Version,
+		"Version":     os.Getenv("APP_VERSION"),
 		"SystemInfo":  systemInfo,
 	})
 }
