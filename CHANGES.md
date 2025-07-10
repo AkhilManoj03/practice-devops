@@ -110,7 +110,7 @@ and testing
 
 **Related PR**: [product: refactor: restructure application architecture and remove JSON datasource #9](https://github.com/AkhilManoj03/practice-devops/pull/9)
 
-### 0. Addition of Authentication Service
+### 9. Addition of Authentication Service
 - **New Microservice**: Introduced a Rust-based authentication service using the Axum framework
 - **Features**:
   - User registration and login with bcrypt password hashing
@@ -149,6 +149,34 @@ and testing
   - Consistent Alpine-based runtime environments
 
 **Related PR**: [Docker: Optimize docker infrastructure #12](https://github.com/AkhilManoj03/practice-devops/pull/12)
+
+### 11. Authentication Service Architecture Enhancement
+- **Major Refactoring**: Transformed the authentication service from a monolithic structure to a
+modern, modular architecture
+- **Security Enhancements**:
+  - Service-to-Service Authentication: Added internal API key protection for registration endpoint
+  - Custom authentication middleware using shared secrets
+  - Enhanced registration flow requiring `X-Internal-API-Key` header
+- **Observability Integration**:
+  - Full OpenTelemetry distributed tracing with OTLP export
+  - Structured logging with configurable levels and thread information
+  - Comprehensive request flow monitoring and performance insights
+- **Configuration Management**:
+  - Centralized `Config` struct for all environment variables
+  - Improved maintainability with configuration accessible via `AppState`
+  - Streamlined setup for different deployment environments
+- **Error Handling Improvements**:
+  - Custom `AppError` enum with specific error variants
+  - Proper HTTP status code mapping for consistent responses
+  - Enhanced debugging with structured error responses
+- **Benefits**:
+  - Enhanced security through service-to-service authentication
+  - Improved code maintainability following Rust API conventions
+  - Better observability and monitoring capabilities
+  - Centralized configuration management
+  - Robust error handling and debugging support
+
+**Related PR**: [auth: Major refactoring and enhancement #13](https://github.com/AkhilManoj03/practice-devops/pull/13)
 
 ## Learning Outcomes
 This project has provided valuable hands-on experience in:

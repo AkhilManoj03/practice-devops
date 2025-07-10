@@ -28,6 +28,10 @@ router.post('/register', async (req, res) => {
       username,
       email,
       password
+    }, {
+      headers: {
+        'X-Internal-API-Key': process.env.INTERNAL_API_KEY
+      }
     });
 
     // Don't set session - require explicit login to get JWT token
