@@ -2,78 +2,15 @@ package main
 
 import (
 	"context"
-	"github.com/gin-gonic/gin"
-	"recommendation/api"
-	"net/http"
-	"time"
-	"encoding/json"
-	"net"
-	"os"
 	"log"
 
+	"github.com/gin-gonic/gin"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+
+	"recommendation/api"
+	"recommendation/data"
 	"recommendation/telemetry"
 )
-
-type SystemInfo struct {
-	Hostname      string
-	IPAddress     string
-	IsContainer   bool
-	IsKubernetes  bool
-}
-
-func GetSystemInfo() SystemInfo {
-	hostname, _ := os.Hostname()
-	addrs, _ := net.InterfaceAddrs()
-	ip := ""
-	for _, addr := range addrs {
-		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				ip = ipnet.IP.String()
-				break
-			}
-		}
-	}
-	isContainer := false
-	if _, err := os.Stat("/.dockerenv"); err == nil {
-		isContainer = true
-	}
-	isKubernetes := false
-
-	return SystemInfo{
-		Hostname:      hostname,
-		IPAddress:     ip,
-		IsContainer:   isContainer,
-		IsKubernetes: isKubernetes,
-	}
-}
-
-func getRecommendationStatus(c *gin.Context) {
-	// Here you would typically check some aspects of your service to determine its status.
-	// If everything's ok, return operational. Otherwise, return a different status.
-	// This is a simple example without real checks, adjust according to your needs.
-
-	// Example checks might include:
-	// - Database connectivity
-	// - External API/service availability
-	// - Disk space, memory usage, etc.
-
-	status := "operational"  // or "down", "maintenance", etc.
-
-	c.JSON(http.StatusOK, gin.H{
-		"status": status,
-	})
-}
-
-func renderHomePage(c *gin.Context) {
-	systemInfo := GetSystemInfo()
-
-	c.HTML(http.StatusOK, "index.html", gin.H{
-		"Year":        time.Now().Year(),
-		"Version":     os.Getenv("APP_VERSION"),
-		"SystemInfo":  systemInfo,
-	})
-}
 
 func main() {
 	// Initialize OpenTelemetry
@@ -87,28 +24,27 @@ func main() {
 		}
 	}()
 
+	// Initialize Database
+	if err := data.InitDB(); err != nil {
+		log.Fatalf("Failed to initialize database: %v", err)
+	}
+
 	router := gin.Default()
 	
 	// Add OpenTelemetry middleware for automatic instrumentation
 	router.Use(otelgin.Middleware("recommendation-service"))
-		
+
 	// Load HTML files
 	router.LoadHTMLGlob("templates/*")
 
 	// Set path to serve static files
 	router.Static("/static", "./static")
 
-	// Define route for the home page
-	router.GET("/", renderHomePage)
-
-	// Handle requests to the /origami-of-the-day endpoint
+	// Define routes
+	router.GET("/", api.RenderHomePage)
 	router.GET("/api/origami-of-the-day", api.GetOrigamiOfTheDay)
-        
-	// Service Status Page
-	router.GET("/api/recommendation-status", getRecommendationStatus)
+	router.GET("/api/recommendation-status", api.GetRecommendationStatus)
 
-	// Start the server on port 8080
+	// Start the server
 	router.Run(":8080")
 }
-
-
