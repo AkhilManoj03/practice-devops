@@ -14,8 +14,8 @@ detailed, chronological log of all enhancements, please see the [CHANGES.md](CHA
 
 ```bash
 # Clone and run
-git clone https://github.com/AkhilManoj03/practice-devops.git
-cd practice-devops
+git clone https://github.com/AkhilManoj03/microservices-showcase.git
+cd microservices-showcase
 docker-compose up --build
 
 # Access the application
@@ -119,7 +119,7 @@ descriptive, and easy to follow.
 -   **Story-Driven Pull Requests**: Each Pull Request (PR) is scoped to a single, significant 
 eature or refactoring effort. The PRs are crafted to "tell a story," guiding the reviewer through a
 logical progression of changes. You can see examples of this in the project's
-[closed PRs](https://github.com/AkhilManoj03/practice-devops/pulls?q=is%3Apr+is%3Aclosed).
+[closed PRs](https://github.com/AkhilManoj03/microservices-showcase/pulls?q=is%3Apr+is%3Aclosed).
 
 -   **Atomic & Conventional Commits**: Commits are atomic, representing one logical change at a time.
 Commit messages follow a structured format that clearly identifies the scope and nature of changes:
