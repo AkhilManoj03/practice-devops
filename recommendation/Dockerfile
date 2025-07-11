@@ -5,6 +5,9 @@ ARG ALPINE_VERSION=3.22
 # Build stage
 FROM golang:${GO_VERSION}-alpine${ALPINE_VERSION} AS builder
 
+# Build arguments for architecture
+ARG TARGETARCH
+
 WORKDIR /build
 
 # Install build dependencies
@@ -26,7 +29,7 @@ RUN go mod tidy
 # Build the application with optimizations for static binary
 RUN CGO_ENABLED=0 \
     GOOS=linux \
-    GOARCH=amd64 \
+    GOARCH=${TARGETARCH} \
     go build -ldflags='-w -s -extldflags "-static"' -o app .
 
 
@@ -47,7 +50,6 @@ WORKDIR /app
 COPY --from=builder --chown=appuser:appuser /build/app ./app
 
 # Copy necessary runtime files
-COPY --chown=appuser:appuser config.json ./
 COPY --chown=appuser:appuser static/ ./static/
 COPY --chown=appuser:appuser templates/ ./templates/
 COPY --chown=appuser:appuser data/ ./data/

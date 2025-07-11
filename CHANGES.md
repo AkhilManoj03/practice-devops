@@ -178,6 +178,23 @@ modern, modular architecture
 
 **Related PR**: [auth: Major refactoring and enhancement #13](https://github.com/AkhilManoj03/practice-devops/pull/13)
 
+### 12. Database and Recommendation Service Refactoring
+- **Database Initialization Improvements**: Moved products table population logic from the products
+API to the `init-db` file, improving separation of concerns and modularity
+- **Recommendation Service Modernization**:
+  - Replaced config.json with environment variables for better containerization
+  - Connected to PostgreSQL database for product retrieval instead of in-memory selection
+  - Implemented modular API structure with dedicated files for different concerns (`home.go`, 
+`status.go`, `origami.go`)
+  - Added multi-architecture Docker support with `TARGETARCH` build argument
+- **Benefits**:
+  - Enhanced performance through direct database queries
+  - Improved maintainability with better code organization
+  - Better deployment flexibility and developer experience
+  - Comprehensive documentation with API examples
+
+**Related PR**: [recom: refactor recommendation service](https://github.com/AkhilManoj03/practice-devops/pull/14)
+
 ## Learning Outcomes
 This project has provided valuable hands-on experience in:
 - Modern containerization techniques
