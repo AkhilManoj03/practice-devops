@@ -19,6 +19,16 @@ Users must register and login to vote for origami designs. The authentication sy
 - Session-based authentication with express-session
 - Protected voting endpoints
 
+### Security Features
+
+- **Secure Registration Endpoint**: The registration endpoint is protected by a shared internal API
+key that is securely configured as an environment variable. This API key is shared only between the
+frontend and authentication service, ensuring that only the frontend application can access the
+registration endpoint and preventing unauthorized user creation.
+- **Environment-based Security**: The internal API key is stored as a secure environment variable,
+keeping it separate from the codebase and allowing for different keys per environment (development,
+staging, production).
+
 ## Setup
 
 1. Install dependencies:
@@ -29,7 +39,8 @@ npm install
 2. Set up environment variables:
 ```bash
 cp ../.env.example .env
-# Edit .env with your configuration
+# Edit .env with your configuration including:
+# - INTERNAL_API_KEY: Shared secret key for secure registration endpoint access
 ```
 
 3. Ensure PostgreSQL database is running (via docker-compose)

@@ -18,7 +18,7 @@ experience with modern DevOps practices and development techniques.
 and testing
 - Improved service isolation and deployment consistency
 
-**Related PR**: [docker: dockerize application #1](https://github.com/AkhilManoj03/practice-devops/pull/1)
+**Related PR**: [docker: dockerize application #1](https://github.com/AkhilManoj03/microservices-showcase/pull/1)
 
 ### 2. Voting Service Refactoring
 - **Original Implementation**: Java Spring Boot ([original code](voting/))
@@ -29,7 +29,7 @@ and testing
   - Improved service reliability and stability
   - Reduced resource consumption
 
-**Related PR**: [voting: new framework for voting service #2](https://github.com/AkhilManoj03/practice-devops/pull/2)
+**Related PR**: [voting: new framework for voting service #2](https://github.com/AkhilManoj03/microservices-showcase/pull/2)
 
 ### 3. Catalogue Service Modernization
 - **Original Implementation**: Python Flask ([original code](catalogue/))
@@ -40,7 +40,7 @@ and testing
   - Enhanced type safety and validation
   - Better async support
 
-**Related PR**: [catalogue: recreate service in FastAPI #3](https://github.com/AkhilManoj03/practice-devops/pull/3)
+**Related PR**: [catalogue: recreate service in FastAPI #3](https://github.com/AkhilManoj03/microservices-showcase/pull/3)
 
 ### 4. Service Consolidation
 - Created a unified [Origami Product Service](combined-fastapi/)
@@ -52,7 +52,7 @@ and testing
   - Better resource utilization
   - Simplified deployment and monitoring
 
-**Related PR**: [combined: create combined voting and catalogue service #4](https://github.com/AkhilManoj03/practice-devops/pull/4)
+**Related PR**: [combined: create combined voting and catalogue service #4](https://github.com/AkhilManoj03/microservices-showcase/pull/4)
 
 ### 5. Database Flexibility
 - Implemented dual database support:
@@ -61,7 +61,7 @@ and testing
 - Added database abstraction layer
 - Improved data persistence and reliability
 
-**Related PR**: [combined: add db support in data access layer #5](https://github.com/AkhilManoj03/practice-devops/pull/5)
+**Related PR**: [combined: add db support in data access layer #5](https://github.com/AkhilManoj03/microservices-showcase/pull/5)
 
 ### 6. Performance Optimization
 - Implemented Redis caching layer
@@ -72,7 +72,7 @@ and testing
   - Better scalability
   - Enhanced user experience
 
-**Related PR**: [combined: feat: implement Redis caching for API #6](https://github.com/AkhilManoj03/practice-devops/pull/6)
+**Related PR**: [combined: feat: implement Redis caching for API #6](https://github.com/AkhilManoj03/microservices-showcase/pull/6)
 
 ### 7. Observability and Distributed Tracing
 - Implemented OpenTelemetry across all microservices for comprehensive observability
@@ -85,7 +85,7 @@ and testing
   - Service dependency mapping
   - Improved system observability and maintainability
 
-**Related PR**: [otel: Implement OpenTelementary and Jaegar #8](https://github.com/AkhilManoj03/practice-devops/pull/8)
+**Related PR**: [otel: Implement OpenTelementary and Jaegar #8](https://github.com/AkhilManoj03/microservices-showcase/pull/8)
 
 ### 8. Application Architecture Restructuring and Cleanup
 - **Restructured Combined FastAPI Service**: Reorganized the application into distinct architectural layers
@@ -108,7 +108,7 @@ and testing
   - Simplified configuration management
   - Better alignment with production-ready practices
 
-**Related PR**: [product: refactor: restructure application architecture and remove JSON datasource #9](https://github.com/AkhilManoj03/practice-devops/pull/9)
+**Related PR**: [product: refactor: restructure application architecture and remove JSON datasource #9](https://github.com/AkhilManoj03/microservices-showcase/pull/9)
 
 ### 9. Addition of Authentication Service
 - **New Microservice**: Introduced a Rust-based authentication service using the Axum framework
@@ -127,7 +127,7 @@ and testing
   - BCrypt for password hashing, RSA for JWT signing
   - Environment-based configuration for database and key management
 
-**Related PR**: [auth: implement authentication microservice #9](https://github.com/AkhilManoj03/practice-devops/pull/9)
+**Related PR**: [auth: implement authentication microservice #9](https://github.com/AkhilManoj03/microservices-showcase/pull/9)
 
 ### 10. Docker Infrastructure Optimization
 - **Multi-stage Build Implementation**: Refactored all Dockerfiles to use multi-stage builds for improved efficiency
@@ -148,7 +148,7 @@ and testing
   - Improved deployment speed and scalability
   - Consistent Alpine-based runtime environments
 
-**Related PR**: [Docker: Optimize docker infrastructure #12](https://github.com/AkhilManoj03/practice-devops/pull/12)
+**Related PR**: [Docker: Optimize docker infrastructure #12](https://github.com/AkhilManoj03/microservices-showcase/pull/12)
 
 ### 11. Authentication Service Architecture Enhancement
 - **Major Refactoring**: Transformed the authentication service from a monolithic structure to a
@@ -176,7 +176,7 @@ modern, modular architecture
   - Centralized configuration management
   - Robust error handling and debugging support
 
-**Related PR**: [auth: Major refactoring and enhancement #13](https://github.com/AkhilManoj03/practice-devops/pull/13)
+**Related PR**: [auth: Major refactoring and enhancement #13](https://github.com/AkhilManoj03/microservices-showcase/pull/13)
 
 ### 12. Database and Recommendation Service Refactoring
 - **Database Initialization Improvements**: Moved products table population logic from the products
@@ -193,7 +193,7 @@ API to the `init-db` file, improving separation of concerns and modularity
   - Better deployment flexibility and developer experience
   - Comprehensive documentation with API examples
 
-**Related PR**: [recom: refactor recommendation service](https://github.com/AkhilManoj03/practice-devops/pull/14)
+**Related PR**: [recom: refactor recommendation service](https://github.com/AkhilManoj03/microservices-showcase/pull/14)
 
 ## Learning Outcomes
 This project has provided valuable hands-on experience in:
