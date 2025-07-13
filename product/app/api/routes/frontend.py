@@ -1,5 +1,5 @@
 """
-Frontend routes for the Combined Origami Service.
+Frontend routes for the Product Service.
 
 This module contains all frontend template rendering endpoints.
 """
@@ -33,7 +33,7 @@ async def home(
         if not templates:
             return JSONResponse(
                 content={
-                    "message": "Welcome to Combined Origami Service",
+                    "message": "Welcome to Product Service",
                     "version": settings.app_version,
                     "system_info": system_info.model_dump(),
                 }
@@ -52,7 +52,7 @@ async def home(
         logging.error(f"Error in home endpoint: {e}")
         return JSONResponse(
             content={
-                "message": "Welcome to Combined Origami Service",
+                "message": "Welcome to Product Service",
                 "version": settings.app_version,
                 "error": "Could not load system information",
             }

@@ -1,5 +1,5 @@
 """
-Voting routes for the Combined Origami Service.
+Voting routes for the Product Service.
 
 This module contains all voting-related API endpoints.
 """

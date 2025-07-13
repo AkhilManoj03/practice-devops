@@ -1,5 +1,5 @@
 """
-API layer for the Combined Origami Service.
+API layer for the Product Service.
 
 This package contains all FastAPI routes, dependencies, and middleware.
 """

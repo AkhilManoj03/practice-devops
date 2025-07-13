@@ -1,5 +1,5 @@
 """
-System routes for the Combined Origami Service.
+System routes for the Product Service.
 
 This module contains all system-related API endpoints including health checks.
 """

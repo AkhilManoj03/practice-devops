@@ -1,5 +1,5 @@
 """
-Vote service for the Combined Origami Service.
+Vote service for the Product Service.
 
 This module contains business logic for voting-related operations.
 """

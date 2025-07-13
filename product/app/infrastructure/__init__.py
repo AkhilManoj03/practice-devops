@@ -1,5 +1,5 @@
 """
-Infrastructure layer for the Combined Origami Service.
+Infrastructure layer for the Product Service.
  
 This package contains all data access and external service integrations.
 """ 

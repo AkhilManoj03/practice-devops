@@ -1,5 +1,5 @@
 """
-Domain models for the Combined Origami Service.
+Domain models for the Product Service.
 
 This module contains all Pydantic models used for data validation and serialization.
 """
