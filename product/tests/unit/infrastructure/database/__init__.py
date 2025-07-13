@@ -1,0 +1,1 @@
+# PostgresManager tests package
