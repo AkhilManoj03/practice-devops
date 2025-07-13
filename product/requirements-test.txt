@@ -1,0 +1,18 @@
+# Testing dependencies for the Product Service
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+pytest-asyncio>=0.21.0
+pytest-xdist>=3.0.0
+coverage>=7.0.0
+
+# For mocking external dependencies
+responses>=0.23.0
+fakeredis>=2.10.0
+testcontainers>=3.7.0
+psycopg2-binary>=2.9.0
+
+# For test data generation
+factory-boy>=3.2.0
+faker>=18.0.0
+
