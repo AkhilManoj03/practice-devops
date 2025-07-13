@@ -1,5 +1,5 @@
 """
-Core business logic layer for the Combined Origami Service.
+Core business logic layer for the Product Service.
 
 This package contains all business logic, domain models, and services.
 """

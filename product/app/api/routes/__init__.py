@@ -1,5 +1,5 @@
 """
-API routes for the Combined Origami Service.
+API routes for the Product Service.
 
 This module contains all FastAPI route definitions organized by domain.
 """

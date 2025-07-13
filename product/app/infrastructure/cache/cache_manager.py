@@ -1,5 +1,5 @@
 """
-Cache manager for the Combined Origami Service.
+Cache manager for the Product Service.
 
 This module handles caching operations using Redis.
 """

@@ -1,5 +1,5 @@
 """
-Custom exceptions for the Combined Origami Service.
+Custom exceptions for the Product Service.
 
 This module defines business-specific exceptions for better error handling.
 """

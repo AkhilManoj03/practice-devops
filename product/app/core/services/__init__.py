@@ -1,5 +1,5 @@
 """
-Business logic services for the Combined Origami Service.
+Business logic services for the Product Service.
 
 This module contains all business logic and service classes.
 """

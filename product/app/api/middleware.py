@@ -1,5 +1,5 @@
 """
-Custom middleware for the Combined Origami Service.
+Custom middleware for the Product Service.
 
 This module contains custom middleware functions and error handlers.
 """

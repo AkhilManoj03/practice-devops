@@ -68,10 +68,10 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ```bash
 # Build the image
-docker build -t combined-origami-service .
+docker build -t product-service .
 
 # Run the container (make sure .env file is present)
-docker run -p 8000:8000 --env-file .env combined-origami-service
+docker run -p 8000:8000 --env-file .env product-service
 ```
 
 ### Docker Compose with PostgreSQL & Redis
@@ -107,7 +107,7 @@ to hold your settings.
 
 ## Migration from Separate Services
 
-This combined service maintains full API compatibility with the original separate services, so
+This product service maintains full API compatibility with the original separate services, so
 existing clients can continue to use the same endpoints without any changes. The primary difference
 is that the `POST /api/origamis/{origami_id}/vote` endpoint now requires a valid JWT Bearer token
 for authentication.

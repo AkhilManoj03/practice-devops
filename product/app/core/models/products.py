@@ -1,5 +1,5 @@
 """
-Product-related models for the Combined Origami Service.
+Product-related models for the Product Service.
 
 This module contains Pydantic models related to products.
 """

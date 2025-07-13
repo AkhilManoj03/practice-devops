@@ -1,5 +1,5 @@
 """
-Combined Origami Service - A FastAPI application for product management and voting.
+Product Service - A FastAPI application for product management and voting.
 
 This service provides REST API endpoints for both product catalogue management
 and voting functionality in a single unified service with clean architecture.

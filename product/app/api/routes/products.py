@@ -1,5 +1,5 @@
 """
-Product catalog routes for the Combined Origami Service.
+Product catalog routes for the Product Service.
 
 This module contains all product-related API endpoints.
 """
