@@ -2,26 +2,28 @@ package api
 
 import (
 	"net/http"
-	"recommendation/data"
 
 	"github.com/gin-gonic/gin"
 )
 
-func GetRecommendationStatus(c *gin.Context) {
-	// Check database connectivity
-	err := data.PingDB()
-	dbStatus := "operational"
-	if err != nil {
-		dbStatus = "down"
-	}
+type PingDBFunc func() error
 
-	status := "operational"
-	if dbStatus == "down" {
-		status = "degraded"
-	}
+func GetRecommendationStatus(pingDB PingDBFunc) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		err := pingDB()
+		dbStatus := "operational"
+		if err != nil {
+			dbStatus = "down"
+		}
 
-	c.JSON(http.StatusOK, gin.H{
-		"status":          status,
-		"database_status": dbStatus,
-	})
+		status := "operational"
+		if dbStatus == "down" {
+			status = "degraded"
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"status":          status,
+			"database_status": dbStatus,
+		})
+	}
 }
