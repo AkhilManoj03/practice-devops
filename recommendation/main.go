@@ -42,7 +42,7 @@ func main() {
 
 	// Define routes
 	router.GET("/", api.RenderHomePage(api.GetSystemInfo))
-	router.GET("/api/origami-of-the-day", api.GetOrigamiOfTheDay)
+	router.GET("/api/origami-of-the-day", api.GetOrigamiOfTheDay(data.GetRandomProduct))
 	router.GET("/api/recommendation-status", api.GetRecommendationStatus(data.PingDB))
 
 	// Start the server
