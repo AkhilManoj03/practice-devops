@@ -23,3 +23,11 @@ opentelemetry-otlp = { version = "0.30", features = ["http-proto", "reqwest-bloc
 base64 = "0.22"
 rsa = "0.9"
 thiserror = "1.0"
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.8"
+axum-test = "14.0"
+rstest = "0.18"
+mockall = "0.12"
+rand = "0.8"
