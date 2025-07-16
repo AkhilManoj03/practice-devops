@@ -1,20 +1,16 @@
-mod config;
-mod errors;
-mod handlers;
-mod middleware;
-mod models;
-mod state;
-mod telemetry;
+use authentication_service::config::Config;
+use authentication_service::state::AppState;
+use authentication_service::telemetry;
+use authentication_service::middleware;
+use authentication_service::handlers;
 
 use axum::{
     middleware as axum_middleware,
     routing::{get, post},
     Router,
 };
-use config::Config;
 use dotenv::dotenv;
 use sqlx::postgres::PgPool;
-use state::AppState;
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use tracing::{error, info};
 
