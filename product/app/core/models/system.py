@@ -1,5 +1,5 @@
 """
-System-related models for the Combined Origami Service.
+System-related models for the Product Service.
 
 This module contains Pydantic models related to system information and health checks.
 """

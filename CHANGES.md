@@ -195,6 +195,35 @@ API to the `init-db` file, improving separation of concerns and modularity
 
 **Related PR**: [recom: refactor recommendation service](https://github.com/AkhilManoj03/microservices-showcase/pull/14)
 
+### 13. Product Service Testing Framework and Unit Tests
+- **Testing Framework Integration**:
+  - Introduced a comprehensive testing framework for the Product Service using pytest.
+  - Added custom pytest configuration and fixtures for robust and isolated testing.
+- **Unit Test Coverage**:
+  - Developed extensive unit tests for API endpoints (products, votes, system info), core services
+  (ProductService, SystemService, VoteService), and infrastructure components (CacheManager,
+  DataAccessLayer).
+  - Implemented test cases for successful operations, error handling, edge cases, and data
+  transformation.
+  - Utilized fixtures and mock services to ensure test isolation and reliability.
+  - Enhanced test coverage for authentication, service integration, health checks, and system
+  information retrieval.
+- **Test Runner Script**:
+  - Added a script to streamline execution of unit, integration, and infrastructure tests with clear
+  command descriptions and error handling.
+- **Documentation Enhancements**:
+  - Expanded the main `README.md` with details about the testing framework, highlighting 100+ unit
+  tests, async testing support, and error scenario coverage.
+  - Added a dedicated `README.md` in the `tests` directory, outlining testing architecture,
+  philosophy, best practices, and instructions for running tests and managing dependencies.
+  - Emphasized isolation, mocking strategies, and performance optimization in the testing process.
+- **Benefits**:
+  - Significantly improved reliability, maintainability, and quality assurance for the Product Service.
+  - Facilitated easier maintenance and future development through a solid testing foundation.
+  - Reduced risk of regressions and increased confidence in code changes.
+
+**Related PR**: [product: add unit tests to product service #16](https://github.com/AkhilManoj03/microservices-showcase/pull/16)
+
 ## Learning Outcomes
 This project has provided valuable hands-on experience in:
 - Modern containerization techniques

@@ -1,5 +1,5 @@
 """
-Data access layer for the Combined Origami Service.
+Data access layer for the Product Service.
 
 This module handles data operations for products with integrated votes,
 supporting database backend with Redis caching.

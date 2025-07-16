@@ -1,5 +1,5 @@
 """
-Product service for the Combined Origami Service.
+Product service for the Product Service.
 
 This module contains business logic for product-related operations.
 """

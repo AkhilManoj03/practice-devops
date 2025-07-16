@@ -1,5 +1,5 @@
 """
-API dependencies for the Combined Origami Service.
+API dependencies for the Product Service.
 
 This module contains dependency injection functions for FastAPI.
 """

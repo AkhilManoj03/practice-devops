@@ -1,5 +1,5 @@
 """
-PostgreSQL database manager for the Combined Origami Service.
+PostgreSQL database manager for the Product Service.
 
 This module handles data operations for products with integrated votes using PostgreSQL.
 """

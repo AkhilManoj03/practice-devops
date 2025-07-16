@@ -1,5 +1,5 @@
 """
-Configuration management for the Combined Origami Service.
+Configuration management for the Product Service.
 
 This module handles all application settings and environment variable loading.
 """
@@ -15,9 +15,9 @@ class Settings(BaseSettings):
     """Application settings with environment variable support."""
 
     # Application settings
-    app_title: str = "Combined Origami Service"
+    app_title: str = "Product Service"
     app_version: str = "1.0.0"
-    app_description: str = "Combined product catalogue and voting service"
+    app_description: str = "Product catalogue and voting service"
 
     # Server settings
     host: str = "0.0.0.0"
