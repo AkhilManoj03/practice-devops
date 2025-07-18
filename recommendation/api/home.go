@@ -42,17 +42,19 @@ func GetSystemInfo() SystemInfo {
 	}
 }
 
-func RenderHomePage(c *gin.Context) {
-	appVersion := os.Getenv("APP_VERSION")
-	if appVersion == "" {
-		appVersion = "1.0.0" // Default version
+type SystemInfoFunc func() SystemInfo
+
+func RenderHomePage(getInfo SystemInfoFunc) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		appVersion := os.Getenv("APP_VERSION")
+		if appVersion == "" {
+			appVersion = "1.0.0" // Default version
+		}
+		systemInfo := getInfo()
+		c.HTML(http.StatusOK, "index.html", gin.H{
+			"Year":       time.Now().Year(),
+			"Version":    appVersion,
+			"SystemInfo": systemInfo,
+		})
 	}
-
-	systemInfo := GetSystemInfo()
-
-	c.HTML(http.StatusOK, "index.html", gin.H{
-		"Year":       time.Now().Year(),
-		"Version":    appVersion,
-		"SystemInfo": systemInfo,
-	})
 }

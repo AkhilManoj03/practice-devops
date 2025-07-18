@@ -41,9 +41,9 @@ func main() {
 	router.Static("/static", "./static")
 
 	// Define routes
-	router.GET("/", api.RenderHomePage)
-	router.GET("/api/origami-of-the-day", api.GetOrigamiOfTheDay)
-	router.GET("/api/recommendation-status", api.GetRecommendationStatus)
+	router.GET("/", api.RenderHomePage(api.GetSystemInfo))
+	router.GET("/api/origami-of-the-day", api.GetOrigamiOfTheDay(data.GetRandomProduct))
+	router.GET("/api/recommendation-status", api.GetRecommendationStatus(data.PingDB))
 
 	// Start the server
 	router.Run(":8080")
