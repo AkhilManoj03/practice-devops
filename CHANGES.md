@@ -224,6 +224,52 @@ API to the `init-db` file, improving separation of concerns and modularity
 
 **Related PR**: [product: add unit tests to product service #16](https://github.com/AkhilManoj03/microservices-showcase/pull/16)
 
+### 14. Recommendation Service Unit Test Suite
+- **Comprehensive Unit Test Coverage**: Added a robust suite of unit tests for the Recommendation
+Service, covering data access, API endpoints (status, home, origami), and rendering logic.
+- **Test Infrastructure**: Introduced test helpers and utilized `sqlmock` for isolated database
+testing. Leveraged Gin's testing framework for HTTP endpoint validation.
+- **Handler Refactoring for Testability**: Refactored API handlers to accept function parameters
+(dependency injection), improving testability and separation of concerns.
+- **Documentation**: Added a detailed README for the test suite, outlining testing philosophy,
+setup, and best practices.
+- **Benefits**:
+  - Improved code reliability and maintainability
+  - Easier future enhancements and refactoring
+  - Clearer separation of concerns and better test isolation
+
+**Related PR**: [recom: add unit tests for recommendation service](https://github.com/AkhilManoj03/microservices-showcase/pull/17)
+
+### 15. Authentication Service Unit Test Suite
+- **Comprehensive Unit Test Coverage**: Added a robust suite of unit tests for the Authentication
+Service, covering all major authentication handlers (login, registration, JWKS/OpenID, and status).
+- **Test Infrastructure**:
+  - Introduced new test dependencies (`anstyle`, `async-stream`, `mockall`, `rstest`, etc.) and 
+  development tools (`tokio-test`, `tempfile`, `axum-test`).
+  - Updated `.gitignore` to exclude `.pem` key files from version control.
+  - Enabled the authentication service to be compiled as both a library and a binary for easier testing.
+  - Modularized the codebase with submodules for configuration, error handling, handlers, middleware, 
+  models, state, and telemetry.
+  - Established a simplified state setup for unit tests that do not require a database connection.
+- **Handler Unit Tests**:
+  - Login handler: Tests for successful login, invalid credentials, invalid payloads, and JSON 
+  serialization.
+  - JWKS/OpenID handlers: Tests for response validation, key integrity, error handling, 
+  serialization, and performance.
+  - Registration handler: Tests for successful registration, user conflict, invalid payloads, and 
+  serialization.
+  - Status handler: Tests for response structure, content, authentication field, serialization, and 
+  performance.
+- **Documentation**:
+  - Added a comprehensive README for the authentication service tests, detailing test structure, 
+  categories, guidelines for adding new tests, and instructions for running tests.
+- **Benefits**:
+  - Improved code reliability, maintainability, and test coverage
+  - Safer refactoring and future enhancements
+  - Clear documentation and guidelines for contributors
+
+**Related PR**: [auth: add unit tests for authentication service](https://github.com/AkhilManoj03/microservices-showcase/pull/18)
+
 ## Learning Outcomes
 This project has provided valuable hands-on experience in:
 - Modern containerization techniques
