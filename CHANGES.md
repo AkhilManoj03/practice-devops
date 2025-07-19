@@ -270,6 +270,27 @@ Service, covering all major authentication handlers (login, registration, JWKS/O
 
 **Related PR**: [auth: add unit tests for authentication service](https://github.com/AkhilManoj03/microservices-showcase/pull/18)
 
+### 16. Frontend Service Unit Test Infrastructure
+- **Testing Framework Setup**: Introduced comprehensive unit testing infrastructure for the Frontend
+Service using Node.js built-in test runner and modern testing tools
+- **Test Dependencies and Tools**:
+  - Added `jsdom` for DOM environment simulation in browser-like testing scenarios
+  - Integrated `sinon` for advanced mocking, stubbing, and test utilities
+  - Updated `package.json` with dedicated test scripts for origami functionality
+- **Documentation and Guidelines**:
+  - Created comprehensive `README.md` for unit tests covering test structure, coverage details,
+  and tool usage
+  - Documented step-by-step instructions for running tests, including setup and individual test
+  execution
+  - Highlighted mocking strategies and error logging verification for robust testing practices
+- **Testing Strategy**:
+  - Focused on origami functionality testing with comprehensive coverage
+  - Implemented error handling and logging verification
+  - Utilized mock-based testing for external dependencies
+  - Ensured test isolation and reliability through proper tooling
+
+**Related PR**: [frontend: add unit tests to frontend service](https://github.com/AkhilManoj03/microservices-showcase/pull/19)
+
 ## Learning Outcomes
 This project has provided valuable hands-on experience in:
 - Modern containerization techniques
