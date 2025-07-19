@@ -134,6 +134,7 @@ class TestSystemRouterIntegration:
 
     def test_health_check_route_metadata(self):
         """Test health check route metadata."""
+        # Find the health check route
         health_route = None
         for route in root_router.routes:
             if hasattr(route, 'path') and route.path.endswith('/health'):
@@ -152,6 +153,7 @@ class TestSystemRouterIntegration:
                 break
         assert system_info_route is not None
         
+        # Test health check route exists
         health_route = None
         for route in root_router.routes:
             if hasattr(route, 'path') and route.path.endswith('/health'):

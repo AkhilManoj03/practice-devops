@@ -32,7 +32,7 @@ class CacheManager:
             self.redis_client = redis.Redis(
                 host=self.settings.redis_host,
                 port=self.settings.redis_port,
-                decode_responses=True
+                decode_responses=True,
             )
             # Test connection
             self.redis_client.ping()

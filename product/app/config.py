@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     postgres_port: int = 5432
 
     # Redis configuration (optional for caching)
-    redis_host: Optional[str] = None
+    redis_host: Optional[str] = "redis"
     redis_port: int = 6379
 
     # Configure Pydantic to ignore extra fields and load from .env file
