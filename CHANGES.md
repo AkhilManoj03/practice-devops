@@ -238,7 +238,7 @@ setup, and best practices.
   - Easier future enhancements and refactoring
   - Clearer separation of concerns and better test isolation
 
-**Related PR**: [recom: add unit tests for recommendation service](https://github.com/AkhilManoj03/microservices-showcase/pull/17)
+**Related PR**: [recom: add unit tests for recommendation service #17](https://github.com/AkhilManoj03/microservices-showcase/pull/17)
 
 ### 15. Authentication Service Unit Test Suite
 - **Comprehensive Unit Test Coverage**: Added a robust suite of unit tests for the Authentication
@@ -268,7 +268,7 @@ Service, covering all major authentication handlers (login, registration, JWKS/O
   - Safer refactoring and future enhancements
   - Clear documentation and guidelines for contributors
 
-**Related PR**: [auth: add unit tests for authentication service](https://github.com/AkhilManoj03/microservices-showcase/pull/18)
+**Related PR**: [auth: add unit tests for authentication service #18](https://github.com/AkhilManoj03/microservices-showcase/pull/18)
 
 ### 16. Frontend Service Unit Test Infrastructure
 - **Testing Framework Setup**: Introduced comprehensive unit testing infrastructure for the Frontend
@@ -289,7 +289,45 @@ Service using Node.js built-in test runner and modern testing tools
   - Utilized mock-based testing for external dependencies
   - Ensured test isolation and reliability through proper tooling
 
-**Related PR**: [frontend: add unit tests to frontend service](https://github.com/AkhilManoj03/microservices-showcase/pull/19)
+**Related PR**: [frontend: add unit tests to frontend service #19](https://github.com/AkhilManoj03/microservices-showcase/pull/19)
+
+### 17. Comprehensive Integration Test Suite
+- **Integration Testing Framework**: Introduced a robust integration testing framework for the
+entire microservices architecture, providing end-to-end validation of service functionality and
+inter-service communication
+- **Test Infrastructure**:
+  - **Core Infrastructure**: Created `tests/config.sh` for centralized configuration management
+  and `tests/helper_scripts.sh` for shared utility functions including logging, error handling,
+  HTTP request execution, and response validation
+  - **Test Orchestration**: Implemented `tests/integration/integration_runner.sh` as the main
+  orchestrator supporting both sequential and parallel test execution modes
+  - **Service-Specific Test Suites**: Developed dedicated test suites for each microservice:
+- **Advanced Features**:
+  - **Flexible Execution Modes**: Sequential execution (default), parallel execution for faster
+  feedback, and individual suite testing for focused validation
+  - **Robust Error Handling**: Exponential backoff for service health checks, graceful failure
+  handling with detailed error messages, and timeout management with configurable limits
+  - **Rich Reporting & Logging**: Color-coded console output with status indicators, detailed
+  logging to `integration-tests.log`, comprehensive test summaries with success rates and timing,
+  and verbose mode for debugging
+  - **Google Shell Style Guide Compliance**: Comprehensive function documentation, proper variable
+  naming conventions, strict error handling with `set -uo pipefail`, and modular design with
+  separation of concerns
+- **Configuration Management**:
+  - **Environment Variables**: Support for global settings (TIMEOUT, VERBOSE, PARALLEL_MODE) and
+  service-specific URLs
+  - **Command Line Options**: Verbosity control, timeout configuration, specific suite execution,
+  and parallel execution flags
+  - **Priority System**: Command line options take precedence over environment variables, which
+  take precedence over default values
+- **Response Validation**: Comprehensive validation including HTTP status code verification, JSON
+structure validation using `jq`, field presence validation, and response timing monitoring
+- **CI/CD Integration**: Designed for seamless pipeline integration with meaningful exit codes
+(0=success, 1-N=failed tests, 124=timeout), detailed logging, and performance monitoring capabilities
+- **Documentation**: Comprehensive `tests/integration/README.md` covering architecture, features,
+quick start guide, configuration options, test structure, logging, and CI/CD integration
+
+**Related PR**: [tests: add comprehensive integration test suite #20](https://github.com/AkhilManoj03/microservices-showcase/pull/20)
 
 ## Learning Outcomes
 This project has provided valuable hands-on experience in:
