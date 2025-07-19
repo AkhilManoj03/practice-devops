@@ -1,5 +1,5 @@
 #! /opt/homebrew/bin/bash
-# 
+#
 # Test Helper Scripts - Provides helper functions for the test suites.
 # Usage: source helper_scripts.sh
 # Options:
