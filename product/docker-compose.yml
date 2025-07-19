@@ -3,14 +3,14 @@ networks:
     driver: bridge
 
 services:
-  products-api:
+  products:
     build:
       context: .
       dockerfile: Dockerfile
     depends_on:
       - products-db
       - redis
-      - otel-collector
+      - authentication
     env_file:
       - .env
     networks:
@@ -19,13 +19,15 @@ services:
       - "8000:8000"
 
   products-db:
-    image: postgres:17-alpine3.21
+    build:
+      context: ../database
+      dockerfile: Dockerfile
     env_file:
       - .env
-    networks:
-      - craftista
     ports:
       - "5432:5432"
+    networks:
+      - craftista
     
   redis:
     image: redis:8.0.0-alpine
@@ -33,23 +35,60 @@ services:
       - craftista
     ports:
       - "6379:6379"
-
-  otel-collector:
-    build: ../otel-collector
-    networks:
-      - craftista
-    ports:
-      - "4317:4317"
-      - "4318:4318"
   
-  jaeger:
-    image: jaegertracing/all-in-one:1.53
-    environment:
-      - COLLECTOR_OTLP_ENABLED=true
+  authentication:
+    build: ../authentication
     networks:
       - craftista
     ports:
-      - "16686:16686"
-      - "14250:14250"
-      - "4317"
-      - "4318"
+      - "8082:8082"
+    env_file:
+      - .env
+    depends_on:
+      - products-db
+  
+  recommendation:
+    build:
+      context: ../recommendation
+      dockerfile: Dockerfile
+    depends_on:
+      - products-db
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    networks:
+      - craftista
+  
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - authentication
+      - products
+      - recommendation
+    networks:
+      - craftista
+
+  # otel-collector:
+  #   build: ../otel-collector
+  #   networks:
+  #     - craftista
+  #   ports:
+  #     - "4317:4317"
+  #     - "4318:4318"
+  
+  # jaeger:
+  #   image: jaegertracing/all-in-one:1.53
+  #   environment:
+  #     - COLLECTOR_OTLP_ENABLED=true
+  #   networks:
+  #     - craftista
+  #   ports:
+  #     - "16686:16686"
+  #     - "14250:14250"
+  #     - "4317"
+  #     - "4318"
