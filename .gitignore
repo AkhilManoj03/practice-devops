@@ -48,3 +48,6 @@ target/
 
 # Keys
 *.pem
+
+# JavaScript
+*/node_modules/
