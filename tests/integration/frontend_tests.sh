@@ -1,4 +1,4 @@
-#! /opt/homebrew/bin/bash
+#!/bin/bash
 #
 # Frontend Tests - Integration Test Suite.
 

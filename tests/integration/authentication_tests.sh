@@ -1,4 +1,4 @@
-#! /opt/homebrew/bin/bash
+#!/bin/bash
 # 
 # Authentication Tests - Integration Test Suite.
 

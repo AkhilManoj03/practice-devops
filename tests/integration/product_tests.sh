@@ -1,4 +1,4 @@
-#! /opt/homebrew/bin/bash
+#!/bin/bash
 #
 # Product Tests - Integration Test Suite.
 
