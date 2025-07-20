@@ -8,12 +8,16 @@ on:
 
 env:
   REGISTRY: docker.io
-  FRONTEND_IMAGE: your-dockerhub-username/frontend
-  AUTH_IMAGE: your-dockerhub-username/authentication
-  PRODUCT_IMAGE: your-dockerhub-username/product
-  RECOMMENDATION_IMAGE: your-dockerhub-username/recommendation
-  DATABASE_IMAGE: your-dockerhub-username/database
-  OTEL_IMAGE: your-dockerhub-username/otel-collector
+  FRONTEND_IMAGE: akhilmanoj03/frontend
+  AUTH_IMAGE: akhilmanoj03/authentication
+  PRODUCT_IMAGE: akhilmanoj03/product
+  RECOMMENDATION_IMAGE: akhilmanoj03/recommendation
+  DATABASE_IMAGE: akhilmanoj03/database
+  OTEL_IMAGE: akhilmanoj03/otel-collector
+  RUST_VERSION: 1.87.0
+  GO_VERSION: 1.23
+  PYTHON_VERSION: 3.13
+  NODE_VERSION: 22
 
 jobs:
   # Job 1: Run unit tests in parallel for all services
@@ -21,48 +25,69 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [frontend, product]
+        service: [recommendation, authentication]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js (for frontend)
-        if: matrix.service == 'frontend'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: './frontend/package-lock.json'
+      # - name: Set up Node.js (for frontend)
+      #   if: matrix.service == 'frontend'
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: ${{ env.NODE_VERSION }}
+      #     cache: 'npm'
+      #     cache-dependency-path: './frontend/package-lock.json'
 
-      - name: Set up Python (for backend services)
-        if: matrix.service == 'product'
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.13'
-          cache: 'pip'
-          cache-dependency-path: './${{ matrix.service }}/requirements.txt'
+      # - name: Set up Python (for Product services)
+      #   if: matrix.service == 'product'
+      #   uses: actions/setup-python@v4
+      #   with:
+      #     python-version: ${{ env.PYTHON_VERSION }}
+      #     cache: 'pip'
+      #     cache-dependency-path: './${{ matrix.service }}/requirements.txt'
 
-      - name: Install dependencies and run tests (Frontend)
-        if: matrix.service == 'frontend'
+      - name: Set up Go (for Recommendation services)
+        if: matrix.service == 'recommendation'
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: 'go'
+          cache-dependency-path: './${{ matrix.service }}/go.mod'
+
+      - name: Set up Rust (for Authentication services)
+        if: matrix.service == 'authentication'
         run: |
-          cd frontend
-          npm ci
-          npm run test
+          rustup install ${{ env.RUST_VERSION }}
 
-      - name: Install dependencies and run tests (Backend)
-        if: matrix.service == 'product'
+      # - name: Install dependencies and run tests (Frontend)
+      #   if: matrix.service == 'frontend'
+      #   run: |
+      #     cd frontend
+      #     npm ci
+      #     npm run test
+
+      # - name: Install dependencies and run tests (Product)
+      #   if: matrix.service == 'product'
+      #   run: |
+      #     cd ${{ matrix.service }}
+      #     pip install -r requirements.txt
+      #     pip install -r requirements-test.txt
+      #     python tests/run_tests.py all
+
+      - name: Install dependencies and run tests (Recommendation)
+        if: matrix.service == 'recommendation'
         run: |
           cd ${{ matrix.service }}
-          pip install -r requirements.txt
-          pip install -r requirements-test.txt
-          python tests/run_tests.py all
+          go mod download
+          go mod verify
+          go mod tidy
+          go test ./tests/...
 
-      # - name: Upload coverage reports
-      #   if: matrix.service != 'frontend'
-      #   uses: codecov/codecov-action@v3
-      #   with:
-      #     file: ./${{ matrix.service }}/coverage.xml
-      #     flags: ${{ matrix.service }}
+      - name: Install dependencies and run tests (Authentication)
+        if: matrix.service == 'authentication'
+        run: |
+          cd ${{ matrix.service }}
+          cargo test
 
   # Job 2: Build and validate Docker images
   # build-images:
