@@ -48,11 +48,12 @@ jobs:
 
       - name: Set up Go (for Recommendation services)
         if: matrix.service == 'recommendation'
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.GO_VERSION }}
-          cache: 'go'
-          cache-dependency-path: './${{ matrix.service }}/go.mod'
+          cache-dependency-path: |
+            ./recommendation/go.mod
+            ./recommendation/go.sum
 
       - name: Set up Rust (for Authentication services)
         if: matrix.service == 'authentication'
