@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   frontend:
-    image: frontend:ci-${GITHUB_SHA}
+    image: ghcr.io/akhilmanoj03/frontend:test
     env_file:
       - .env
     ports:
@@ -26,7 +26,7 @@ services:
       - app-network
 
   products:
-    image: product:ci-${GITHUB_SHA}
+    image: ghcr.io/akhilmanoj03/product:test
     env_file:
       - .env
     depends_on:
@@ -57,9 +57,7 @@ services:
       - app-network
 
   recommendation:
-    build:
-      context: ../recommendation
-      dockerfile: Dockerfile
+    image: ghcr.io/akhilmanoj03/recommendation:test
     depends_on:
       - products-db
     env_file:
