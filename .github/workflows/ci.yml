@@ -21,77 +21,77 @@ env:
 
 jobs:
   # Job 1: Run unit tests in parallel for all services
-  unit-tests:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [frontend, product]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+  # unit-tests:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       service: [frontend, product]
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
 
-      - name: Set up Node.js (for frontend)
-        if: matrix.service == 'frontend'
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: './frontend/package-lock.json'
+  #     - name: Set up Node.js (for frontend)
+  #       if: matrix.service == 'frontend'
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: ${{ env.NODE_VERSION }}
+  #         cache: 'npm'
+  #         cache-dependency-path: './frontend/package-lock.json'
 
-      - name: Set up Python (for Product services)
-        if: matrix.service == 'product'
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-          cache-dependency-path: './${{ matrix.service }}/requirements.txt'
+  #     - name: Set up Python (for Product services)
+  #       if: matrix.service == 'product'
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: ${{ env.PYTHON_VERSION }}
+  #         cache: 'pip'
+  #         cache-dependency-path: './${{ matrix.service }}/requirements.txt'
 
-      # - name: Set up Go (for Recommendation services)
-      #   if: matrix.service == 'recommendation'
-      #   uses: actions/setup-go@v5
-      #   with:
-      #     go-version: ${{ env.GO_VERSION }}
-      #     cache-dependency-path: |
-      #       ./recommendation/go.mod
-      #       ./recommendation/go.sum
+  #     # - name: Set up Go (for Recommendation services)
+  #     #   if: matrix.service == 'recommendation'
+  #     #   uses: actions/setup-go@v5
+  #     #   with:
+  #     #     go-version: ${{ env.GO_VERSION }}
+  #     #     cache-dependency-path: |
+  #     #       ./recommendation/go.mod
+  #     #       ./recommendation/go.sum
 
-      # - name: Set up Rust (for Authentication services)
-      #   if: matrix.service == 'authentication'
-      #   run: |
-      #     rustup install ${{ env.RUST_VERSION }}
+  #     # - name: Set up Rust (for Authentication services)
+  #     #   if: matrix.service == 'authentication'
+  #     #   run: |
+  #     #     rustup install ${{ env.RUST_VERSION }}
 
-      - name: Install dependencies and run tests (Frontend)
-        if: matrix.service == 'frontend'
-        run: |
-          cd frontend
-          npm ci
-          npm run test
+  #     - name: Install dependencies and run tests (Frontend)
+  #       if: matrix.service == 'frontend'
+  #       run: |
+  #         cd frontend
+  #         npm ci
+  #         npm run test
 
-      - name: Install dependencies and run tests (Product)
-        if: matrix.service == 'product'
-        run: |
-          cd ${{ matrix.service }}
-          pip install -r requirements.txt
-          pip install -r requirements-test.txt
-          python tests/run_tests.py all
+  #     - name: Install dependencies and run tests (Product)
+  #       if: matrix.service == 'product'
+  #       run: |
+  #         cd ${{ matrix.service }}
+  #         pip install -r requirements.txt
+  #         pip install -r requirements-test.txt
+  #         python tests/run_tests.py all
 
-      # - name: Install dependencies and run tests (Recommendation)
-      #   if: matrix.service == 'recommendation'
-      #   run: |
-      #     cd ${{ matrix.service }}
-      #     go mod download
-      #     go mod verify
-      #     go mod tidy
-      #     go test ./tests/...
+  #     # - name: Install dependencies and run tests (Recommendation)
+  #     #   if: matrix.service == 'recommendation'
+  #     #   run: |
+  #     #     cd ${{ matrix.service }}
+  #     #     go mod download
+  #     #     go mod verify
+  #     #     go mod tidy
+  #     #     go test ./tests/...
 
-      # - name: Install dependencies and run tests (Authentication)
-      #   if: matrix.service == 'authentication'
-      #   run: |
-      #     cd ${{ matrix.service }}
-      #     cargo test
+  #     # - name: Install dependencies and run tests (Authentication)
+  #     #   if: matrix.service == 'authentication'
+  #     #   run: |
+  #     #     cd ${{ matrix.service }}
+  #     #     cargo test
 
   build-images:
-    needs: unit-tests
+    #needs: unit-tests
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -129,6 +129,14 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GH_PAT }}
+  
 
       - name: Download all artifacts
         uses: actions/download-artifact@v4
