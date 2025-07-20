@@ -15,9 +15,7 @@ services:
       - app-network
   
   authentication:
-    build:
-      context: ../authentication
-      dockerfile: Dockerfile
+    image: ghcr.io/akhilmanoj03/authentication:test
     ports:
       - "8082:8082"
     env_file:
