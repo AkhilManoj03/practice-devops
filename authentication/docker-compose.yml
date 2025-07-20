@@ -4,11 +4,11 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8082:8082"
     environment:
       - DATABASE_URL=postgres://devops:catalogue@products-db:5432/products-db
       - RUST_LOG=info
-      - PORT=8080
+      - PORT=8082
     env_file:
       - .env
     depends_on:
@@ -20,10 +20,8 @@ services:
     build:
       context: ../database
       dockerfile: Dockerfile
-    environment:
-      - POSTGRES_USER=devops
-      - POSTGRES_PASSWORD=catalogue
-      - POSTGRES_DB=products-db
+    env_file:
+      - .env
     ports:
       - "5432:5432"
     networks:
@@ -33,6 +31,8 @@ services:
     build:
       context: ../frontend
       dockerfile: Dockerfile
+    env_file:
+      - .env
     ports:
       - "3000:3000"
     depends_on:
