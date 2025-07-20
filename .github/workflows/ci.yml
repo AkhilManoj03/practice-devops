@@ -1,0 +1,325 @@
+name: Microservice CI Pipeline
+
+on:
+  push:
+    branches: [ dev ]
+  # pull_request:
+  #   branches: [  ]
+
+env:
+  REGISTRY: docker.io
+  FRONTEND_IMAGE: your-dockerhub-username/frontend
+  AUTH_IMAGE: your-dockerhub-username/authentication
+  PRODUCT_IMAGE: your-dockerhub-username/product
+  RECOMMENDATION_IMAGE: your-dockerhub-username/recommendation
+  DATABASE_IMAGE: your-dockerhub-username/database
+  OTEL_IMAGE: your-dockerhub-username/otel-collector
+
+jobs:
+  # Job 1: Run unit tests in parallel for all services
+  unit-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [frontend, product]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js (for frontend)
+        if: matrix.service == 'frontend'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: './frontend/package-lock.json'
+
+      - name: Set up Python (for backend services)
+        if: matrix.service == 'product'
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+          cache-dependency-path: './${{ matrix.service }}/requirements.txt'
+
+      - name: Install dependencies and run tests (Frontend)
+        if: matrix.service == 'frontend'
+        run: |
+          cd frontend
+          npm ci
+          npm run test
+
+      - name: Install dependencies and run tests (Backend)
+        if: matrix.service == 'product'
+        run: |
+          cd ${{ matrix.service }}
+          pip install -r requirements.txt
+          pip install -r requirements-test.txt
+          python tests/run_tests.py all
+
+      # - name: Upload coverage reports
+      #   if: matrix.service != 'frontend'
+      #   uses: codecov/codecov-action@v3
+      #   with:
+      #     file: ./${{ matrix.service }}/coverage.xml
+      #     flags: ${{ matrix.service }}
+
+  # Job 2: Build and validate Docker images
+  # build-images:
+  #   needs: unit-tests
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       service: [frontend, authentication, product, recommendation, database, otel-collector]
+  #   outputs:
+  #     frontend-digest: ${{ steps.build.outputs.frontend-digest }}
+  #     auth-digest: ${{ steps.build.outputs.auth-digest }}
+  #     product-digest: ${{ steps.build.outputs.product-digest }}
+  #     recommendation-digest: ${{ steps.build.outputs.recommendation-digest }}
+  #     database-digest: ${{ steps.build.outputs.database-digest }}
+  #     otel-digest: ${{ steps.build.outputs.otel-digest }}
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v3
+
+  #     - name: Build and export image
+  #       id: build
+  #       uses: docker/build-push-action@v5
+  #       with:
+  #         context: ./${{ matrix.service }}
+  #         file: ./${{ matrix.service }}/Dockerfile
+  #         push: false
+  #         tags: ${{ matrix.service }}:latest
+  #         cache-from: type=gha
+  #         cache-to: type=gha,mode=max
+  #         outputs: type=docker,dest=/tmp/${{ matrix.service }}-image.tar
+
+  #     - name: Upload artifact
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: ${{ matrix.service }}-image
+  #         path: /tmp/${{ matrix.service }}-image.tar
+  #         retention-days: 1
+
+  # # Job 3: Integration and E2E tests
+  # integration-tests:
+  #   needs: build-images
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+
+  #     - name: Download all artifacts
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         path: /tmp/images
+
+  #     - name: Load Docker images
+  #       run: |
+  #         for image in /tmp/images/*/; do
+  #           image_name=$(basename "$image")
+  #           docker load -i "$image"/*.tar
+  #         done
+
+  #     - name: Create test environment file
+  #       run: |
+  #         cat > .env << EOF
+  #         # Database
+  #         POSTGRES_DB=testdb
+  #         POSTGRES_USER=testuser
+  #         POSTGRES_PASSWORD=testpass
+  #         DATABASE_URL=postgresql://testuser:testpass@products-db:5432/testdb
+          
+  #         # Auth Service
+  #         JWT_SECRET=test-jwt-secret-key
+  #         AUTH_SERVICE_URL=http://authentication:8082
+          
+  #         # Product Service
+  #         PRODUCT_SERVICE_URL=http://products:8000
+  #         REDIS_URL=redis://redis:6379
+          
+  #         # Recommendation Service
+  #         RECOMMENDATION_SERVICE_URL=http://recommendation:8080
+          
+  #         # Observability
+  #         OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+  #         OTEL_SERVICE_NAME=integration-test
+  #         EOF
+
+  #     - name: Start services with Docker Compose
+  #       run: |
+  #         docker-compose up -d
+          
+  #     - name: Wait for services to be ready
+  #       run: |
+  #         echo "Waiting for services to start..."
+  #         sleep 30
+          
+  #         # Health check script
+  #         services=("authentication:8082" "products:8000" "recommendation:8080" "products-db:5432")
+  #         for service in "${services[@]}"; do
+  #           IFS=':' read -r host port <<< "$service"
+  #           echo "Checking $host:$port..."
+  #           timeout 60 bash -c 'until nc -z $0 $1; do sleep 1; done' "$host" "$port"
+  #         done
+
+  #     - name: Run integration tests
+  #       run: |
+  #         # Example integration test script
+  #         python -m pytest tests/integration/ -v --tb=short
+          
+  #     - name: Run E2E tests
+  #       run: |
+  #         # Install test dependencies
+  #         pip install requests pytest
+          
+  #         # Run E2E tests against running services
+  #         python -m pytest tests/e2e/ -v --tb=short --base-url=http://localhost:3000
+
+  #     - name: Collect service logs on failure
+  #       if: failure()
+  #       run: |
+  #         echo "=== Frontend Logs ==="
+  #         docker-compose logs frontend
+  #         echo "=== Auth Logs ==="
+  #         docker-compose logs authentication
+  #         echo "=== Product Logs ==="
+  #         docker-compose logs products
+  #         echo "=== Recommendation Logs ==="
+  #         docker-compose logs recommendation
+  #         echo "=== Database Logs ==="
+  #         docker-compose logs products-db
+
+  #     - name: Cleanup
+  #       if: always()
+  #       run: docker-compose down -v
+
+  # # Job 4: Security scanning
+  # security-scan:
+  #   needs: build-images
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       service: [frontend, authentication, product, recommendation]
+  #   steps:
+  #     - name: Download image artifact
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: ${{ matrix.service }}-image
+  #         path: /tmp
+
+  #     - name: Load Docker image
+  #       run: docker load -i /tmp/${{ matrix.service }}-image.tar
+
+  #     - name: Run Trivy vulnerability scanner
+  #       uses: aquasecurity/trivy-action@master
+  #       with:
+  #         image-ref: ${{ matrix.service }}:latest
+  #         format: sarif
+  #         output: trivy-results.sarif
+
+  #     - name: Upload Trivy scan results
+  #       uses: github/codeql-action/upload-sarif@v2
+  #       with:
+  #         sarif_file: trivy-results.sarif
+
+  # # Job 5: Push to registry (only on main branch)
+  # push-images:
+  #   needs: [integration-tests, security-scan]
+  #   runs-on: ubuntu-latest
+  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  #   strategy:
+  #     matrix:
+  #       service: [frontend, authentication, product, recommendation, database, otel-collector]
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+
+  #     - name: Download image artifact
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: ${{ matrix.service }}-image
+  #         path: /tmp
+
+  #     - name: Load Docker image
+  #       run: docker load -i /tmp/${{ matrix.service }}-image.tar
+
+  #     - name: Login to Docker Hub
+  #       uses: docker/login-action@v3
+  #       with:
+  #         username: ${{ secrets.DOCKERHUB_USERNAME }}
+  #         password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v3
+
+  #     - name: Extract metadata
+  #       id: meta
+  #       uses: docker/metadata-action@v5
+  #       with:
+  #         images: |
+  #           ${{ env.REGISTRY }}/${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.service }}
+  #         tags: |
+  #           type=ref,event=branch
+  #           type=sha,prefix={{branch}}-
+  #           type=raw,value=latest,enable={{is_default_branch}}
+
+  #     - name: Build and push
+  #       uses: docker/build-push-action@v5
+  #       with:
+  #         context: ./${{ matrix.service }}
+  #         file: ./${{ matrix.service }}/Dockerfile
+  #         push: true
+  #         tags: ${{ steps.meta.outputs.tags }}
+  #         labels: ${{ steps.meta.outputs.labels }}
+  #         cache-from: type=gha
+  #         cache-to: type=gha,mode=max
+
+  # # Job 6: Trigger CD pipeline
+  # trigger-deployment:
+  #   needs: push-images
+  #   runs-on: ubuntu-latest
+  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+  #   steps:
+  #     - name: Trigger CD Pipeline
+  #       run: |
+  #         curl -X POST \
+  #           -H "Authorization: token ${{ secrets.CD_TRIGGER_TOKEN }}" \
+  #           -H "Accept: application/vnd.github.v3+json" \
+  #           -H "Content-Type: application/json" \
+  #           -d '{
+  #             "event_type": "deploy",
+  #             "client_payload": {
+  #               "environment": "staging",
+  #               "services": {
+  #                 "frontend": "${{ env.FRONTEND_IMAGE }}:${{ github.sha }}",
+  #                 "authentication": "${{ env.AUTH_IMAGE }}:${{ github.sha }}",
+  #                 "product": "${{ env.PRODUCT_IMAGE }}:${{ github.sha }}",
+  #                 "recommendation": "${{ env.RECOMMENDATION_IMAGE }}:${{ github.sha }}",
+  #                 "database": "${{ env.DATABASE_IMAGE }}:${{ github.sha }}",
+  #                 "otel-collector": "${{ env.OTEL_IMAGE }}:${{ github.sha }}"
+  #               }
+  #             }
+  #           }' \
+  #           https://api.github.com/repos/your-org/your-cd-repo/dispatches
+
+  #     - name: Notify Slack on success
+  #       if: success()
+  #       uses: 8398a7/action-slack@v3
+  #       with:
+  #         status: success
+  #         text: '✅ CI Pipeline completed successfully! Images pushed and CD triggered.'
+  #       env:
+  #         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  #     - name: Notify Slack on failure
+  #       if: failure()
+  #       uses: 8398a7/action-slack@v3
+  #       with:
+  #         status: failure
+  #         text: '❌ CI Pipeline failed!'
+  #       env:
+  #         SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
