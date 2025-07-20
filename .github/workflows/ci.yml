@@ -166,7 +166,7 @@ jobs:
           # Observability
           OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
           EOF
-      
+       
       - name: install and setup docker-compose
         uses: docker/setup-compose-action@v1.2.0
         with:
@@ -175,7 +175,7 @@ jobs:
       - name: Start services with Docker Compose
         run: |
           cd ci
-          GITHUB_SHA=${{ github.sha }} docker-compose -f docker-compose.yml up -d
+          GITHUB_SHA=${{ github.sha }} docker compose -f docker-compose.yml up -d
           
       - name: Run integration tests
         run: |
@@ -196,21 +196,21 @@ jobs:
         run: |
           cd ci
           echo "=== Frontend Logs ==="
-          docker-compose -f docker-compose.yml logs frontend
+          docker compose -f docker-compose.yml logs frontend
           echo "=== Auth Logs ==="
-          docker-compose -f docker-compose.yml logs authentication
+          docker compose -f docker-compose.yml logs authentication
           echo "=== Product Logs ==="
-          docker-compose -f docker-compose.yml logs products
+          docker compose -f docker-compose.yml logs products
           echo "=== Recommendation Logs ==="
-          docker-compose -f docker-compose.yml logs recommendation
+          docker compose -f docker-compose.yml logs recommendation
           echo "=== Database Logs ==="
-          docker-compose -f docker-compose.yml logs products-db
+          docker compose -f docker-compose.yml logs products-db
 
       - name: Cleanup
         if: always()
         run: |
           cd ci
-          docker-compose -f docker-compose.ci.yml down -v
+          docker compose -f docker-compose.yml down -v
 
   # # Job 4: Security scanning
   # security-scan:
