@@ -166,6 +166,11 @@ jobs:
           # Observability
           OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
           EOF
+      
+      - name: install and setup docker-compose
+        uses: docker/setup-compose-action@v1.2.0
+        with:
+          version: v2.32.4
 
       - name: Start services with Docker Compose
         run: |
