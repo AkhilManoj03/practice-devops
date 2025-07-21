@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	_ "github.com/jackc/pgx/v4/stdlib"
 )
@@ -34,8 +35,22 @@ func InitDB() error {
 		return fmt.Errorf("unable to connect to database: %w", err)
 	}
 
-	if err = PingDB(); err != nil {
-		return fmt.Errorf("database ping failed: %w", err)
+	// Retry logic for database connection
+	maxRetries := 10
+	retryDelay := 2 * time.Second
+	
+	for i := 0; i < maxRetries; i++ {
+		if err = PingDB(); err == nil {
+			log.Println("Database connection established")
+			return nil
+		}
+		
+		log.Printf("Database connection attempt %d/%d failed: %v", i+1, maxRetries, err)
+		
+		if i < maxRetries-1 {
+			log.Printf("Retrying in %v...", retryDelay)
+			time.Sleep(retryDelay)
+		}
 	}
 
 	log.Println("Database connection established")
