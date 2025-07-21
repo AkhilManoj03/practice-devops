@@ -364,9 +364,9 @@ function test_service() {
 #   0 if service becomes ready, 124 if service fails to become ready
 #######################################
 function wait_for_service() {
-  local max_attempts=2
+  local max_attempts=5
   local attempt=0
-  local wait_time=1
+  local wait_time=5
 
   log_info "Waiting for service at ${SERVICE_URL} to be ready..."
     
