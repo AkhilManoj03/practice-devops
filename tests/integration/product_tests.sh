@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../helper_scripts.sh"
 
 SERVICE_URL="${PRODUCT_SERVICE_URL:-http://localhost:8000}"
-INITIAL_SERVICE_URL="${SERVICE_URL}/status"
+INITIAL_SERVICE_URL="${SERVICE_URL}/health"
 
 # Test data definitions
 readonly PRODUCT_FIELDS=("id" "name" "description" "image_url" "votes")
