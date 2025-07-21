@@ -21,7 +21,8 @@ services:
     env_file:
       - .env
     depends_on:
-      - products-db
+      products-db:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -30,9 +31,12 @@ services:
     env_file:
       - .env
     depends_on:
-      - authentication
-      - products-db
-      - redis
+      authentication:
+        condition: service_started
+      products-db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     ports:
       - "8000:8000"
     networks:
@@ -44,6 +48,12 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U devops -d products-db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     ports:
       - "5432:5432"
     networks:
@@ -59,7 +69,8 @@ services:
   recommendation:
     image: ghcr.io/akhilmanoj03/recommendation:test
     depends_on:
-      - products-db
+      products-db:
+        condition: service_healthy
     env_file:
       - .env
     ports:
